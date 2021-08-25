@@ -50,6 +50,7 @@ class SudokuBoardDisplay:
         for row in range(0, range_end):
             cols = []
             for col in range(0, range_end):
+                in_cell = False
                 if row in separator_indices:
                     if col in separator_indices:
                         # We're at a point
@@ -63,8 +64,9 @@ class SudokuBoardDisplay:
                         item = TkLabel(board, image=self.v_separator_img, borderwidth=0)
                     else:
                         # We're at the cell itself
+                        in_cell = True
                         item = Cell(board)
-                if type(item) is Cell:
+                if in_cell:
                     item.grid(row=row, column=col, sticky=(N, S, E, W))
                     cols.append(item)
                 else:
