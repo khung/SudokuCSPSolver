@@ -1,3 +1,5 @@
+from collections import deque
+
 # Define what a constraint satisfaction problem should consist of
 class ConstraintSatisfactionProblem:
     def __init__(self, variables: list, domains: list, constraints: list):
@@ -56,22 +58,22 @@ class AC3:
         if self.is_consistent:
             self.solution = {}
             for variable in self.csp.variables:
-                domain = self.csp.get_domain(variable)
-                assert len(domain) == 1
-                self.solution[variable] = domain[0]
+                # This can return multiple values for a variable if there are multiple solutions.
+                self.solution[variable] = self.csp.get_domain(variable)
         return self.solution
 
     # Based on AC-3 pseudo-code from AIMA 3rd ed. Chapter 6
     def run_algorithm(self) -> bool:
+        # Add all variable pairs as arcs. Arcs A->B and B->A should both be added so that the values in A and B can be
+        # tested against each other.
         queue = []
         for first_var in self.csp.variables:
             for second_var in self.csp.get_neighbors(first_var):
-                # Assumes that the variables can be sorted in some stable order
-                arc = tuple(sorted([first_var, second_var]))
-                if arc not in queue:
-                    queue.append(arc)
+                queue.append((first_var, second_var))
+        # Turn the list into a FIFO queue
+        queue = deque(queue)
         while len(queue) > 0:
-            first_var, second_var = queue.pop()
+            first_var, second_var = queue.popleft()
             if self.revise(first_var, second_var):
                 if len(self.csp.get_domain(first_var)) == 0:
                     return False
