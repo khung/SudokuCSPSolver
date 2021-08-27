@@ -24,7 +24,8 @@ class ConstraintSatisfactionProblem:
                     self.constraints[first_var] = {}
                 if second_var not in self.constraints[first_var].keys():
                     self.constraints[first_var][second_var] = [constraint_func]
-                else:
+                elif constraint_func not in self.constraints[first_var][second_var]:
+                    # Only add constraint if it's not already there due to a prior symmetric constraint
                     self.constraints[first_var][second_var].append(constraint_func)
         # Bookkeeping variables
         self.neighbors = {}
