@@ -4,6 +4,7 @@ from sudoku_board import *
 
 
 class TestAlgorithms(unittest.TestCase):
+    # Sudoku solution taken from https://en.wikipedia.org/wiki/Sudoku
     sudoku_puzzle_solvable = [
         5, 3, 0, 0, 7, 0, 0, 0, 0,
         6, 0, 0, 1, 9, 5, 0, 0, 0,
@@ -56,6 +57,19 @@ class TestAlgorithms(unittest.TestCase):
         0, 0, 0, 4, 1, 9, 0, 0, 5,
         0, 0, 0, 0, 8, 0, 0, 7, 9
     ]
+    # 4x4 board to test inefficient heuristics
+    sudoku_puzzle_4x4_solvable = [
+        0, 2, 0, 4,
+        3, 0, 1, 0,
+        0, 3, 0, 1,
+        4, 0, 2, 0
+    ]
+    sudoku_solution_4x4_solvable = [
+        1, 2, 3, 4,
+        3, 4, 1, 2,
+        2, 3, 4, 1,
+        4, 1, 2, 3
+    ]
 
     def test_ac3_on_trivial_csp(self):
         def not_equal(v1, v2):
@@ -74,7 +88,6 @@ class TestAlgorithms(unittest.TestCase):
         self.assertDictEqual(solution, result)
 
     def test_ac3_on_solvable_sudoku(self):
-        # Sudoku solution taken from https://en.wikipedia.org/wiki/Sudoku
         solution_dict = {}
         for i in range(9):
             for j in range(9):
@@ -105,6 +118,61 @@ class TestAlgorithms(unittest.TestCase):
         ac3_runner = AC3(csp)
         result = ac3_runner.run()
         self.assertIsNone(result)
+
+    def test_ac3_on_solvable_4x4_sudoku(self):
+        sudoku_size = 4
+        solution_dict = {}
+        for i in range(sudoku_size):
+            for j in range(sudoku_size):
+                var_name = str((i+1)*10 + (j+1))
+                solution_dict[var_name] = [self.sudoku_solution_4x4_solvable[i*sudoku_size + j]]
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
+        csp = board.generate_csp()
+        ac3_runner = AC3(csp)
+        result = ac3_runner.run()
+        self.assertDictEqual(solution_dict, result)
+
+    def test_backtracking_on_trivial_csp(self):
+        def not_equal(v1, v2):
+            return v1 != v2
+        variables = ["11", "12", "21", "22"]
+        domains = [[1, 2, 3, 4], [2], [3], [4]]
+        constraints = []
+        for i in range(len(variables)):
+            for j in range(i+1, len(variables)):
+                if i != j:
+                    constraints.append((variables[i], variables[j], not_equal))
+        solution = {"11": 1, "12": 2, "21": 3, "22": 4}
+        csp = ConstraintSatisfactionProblem(variables, domains, constraints)
+        backtracking_runner = BacktrackingSearch(csp)
+        result = backtracking_runner.run()
+        self.assertDictEqual(solution, result)
+
+    def test_backtracking_on_solvable_sudoku(self):
+        sudoku_size = 4
+        solution_dict = {}
+        for i in range(sudoku_size):
+            for j in range(sudoku_size):
+                var_name = str((i+1)*10 + (j+1))
+                solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i*sudoku_size + j]
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
+        csp = board.generate_csp()
+        backtracking_runner = BacktrackingSearch(csp)
+        result = backtracking_runner.run()
+        self.assertDictEqual(solution_dict, result)
+
+    def test_backtracking_with_forward_checking(self):
+        sudoku_size = 4
+        solution_dict = {}
+        for i in range(sudoku_size):
+            for j in range(sudoku_size):
+                var_name = str((i+1)*10 + (j+1))
+                solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i*sudoku_size + j]
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
+        csp = board.generate_csp()
+        backtracking_runner = BacktrackingSearch(csp, inference_function=InferenceFunctions.ForwardChecking)
+        result = backtracking_runner.run()
+        self.assertDictEqual(solution_dict, result)
 
 
 if __name__ == '__main__':

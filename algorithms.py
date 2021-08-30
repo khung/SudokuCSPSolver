@@ -1,4 +1,6 @@
 from collections import deque
+from enum import Enum, auto
+import copy
 
 
 # Define what a constraint satisfaction problem should consist of
@@ -43,6 +45,9 @@ class ConstraintSatisfactionProblem:
 
     def get_domain(self, variable):
         return self.domains[variable]
+
+    def get_all_domains(self):
+        return self.domains
 
     def get_constraints(self, first_var, second_var):
         return self.constraints[first_var][second_var]
@@ -100,3 +105,136 @@ class AC3:
                 self.csp.delete_from_domain(first_var, first_var_value)
                 revised = True
         return revised
+
+
+class SelectUnassignedVariableHeuristics(Enum):
+    none = auto()
+    MRV = auto()
+    DegreeHeuristic = auto()
+
+
+class OrderDomainValuesHeuristics(Enum):
+    none = auto()
+    LCV = auto()
+
+
+class InferenceFunctions(Enum):
+    none = auto()
+    ForwardChecking = auto()
+
+
+class BacktrackingSearch:
+    def __init__(
+            self,
+            csp: ConstraintSatisfactionProblem,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.none,
+            order_domain_values_heuristic=OrderDomainValuesHeuristics.none,
+            inference_function=InferenceFunctions.none
+    ):
+        self.csp = csp
+        self.select_unassigned_variable_heuristic = None
+        self.order_domain_values_heuristic = None
+        self.inference_function = None
+        if select_unassigned_variable_heuristic in SelectUnassignedVariableHeuristics:
+            self.select_unassigned_variable_heuristic = select_unassigned_variable_heuristic
+        else:
+            raise ValueError("Invalid value for select_unassigned_variable_heuristic")
+        if order_domain_values_heuristic in OrderDomainValuesHeuristics:
+            self.order_domain_values_heuristic = order_domain_values_heuristic
+        else:
+            raise ValueError("Invalid value for order_domain_values_heuristic")
+        if inference_function in InferenceFunctions:
+            self.inference_function = inference_function
+        else:
+            raise ValueError("Invalid value for inference_function")
+        self.solution = None
+
+    def run(self):
+        self.solution = self.run_algorithm()
+        return self.solution
+
+    # Based on Backtracking-Search pseudo-code from AIMA 3rd ed. Chapter 6
+    def run_algorithm(self):
+        return self.backtrack({}, None)
+
+    def backtrack(self, assignment: dict, inferences):
+        if self.complete_assignment(assignment):
+            return assignment
+        variable = self.select_unassigned_variable(assignment)
+        for value in self.order_domain_values(variable, assignment, inferences):
+            if self.is_consistent(variable, value, assignment):
+                assignment[variable] = value
+                new_inferences = self.inference(variable, value, inferences)
+                # Only continue if there are valid inferences. Otherwise, it means there will be a variable with no
+                # valid assignment.
+                if new_inferences:
+                    result = self.backtrack(assignment, new_inferences)
+                    if result:
+                        return result
+        # Need to remove variable assignment as the assignment variable is mutable, so it is passed by reference.
+        if variable in assignment.keys():
+            del assignment[variable]
+        return None
+
+    def complete_assignment(self, assignment: dict) -> bool:
+        for variable in self.csp.get_variables():
+            if variable not in assignment.keys():
+                return False
+            if not assignment[variable]:
+                return False
+        return True
+
+    def select_unassigned_variable(self, assignment: dict):
+        if self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.MRV:
+            pass
+        elif self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DegreeHeuristic:
+            pass
+        else:
+            # Naively select "next" variable
+            for variable in self.csp.get_variables():
+                if variable not in assignment.keys():
+                    return variable
+
+    def order_domain_values(self, variable, assignment: dict, inferences):
+        if self.order_domain_values_heuristic == OrderDomainValuesHeuristics.LCV:
+            pass
+        else:
+            # Naively select "next" value
+            if inferences:
+                return inferences[variable]
+            else:
+                return self.csp.get_domain(variable)
+
+    def is_consistent(self, variable, value, assignment):
+        # Check if the value violates any of the constraints with already-assigned neighbors
+        for neighbor in self.csp.get_neighbors(variable):
+            if neighbor in assignment.keys():
+                for constraint_func in self.csp.get_constraints(variable, neighbor):
+                    if not constraint_func(value, assignment[neighbor]):
+                        return False
+        return True
+
+    def inference(self, variable, value, inferences=None):
+        if self.inference_function == InferenceFunctions.ForwardChecking:
+            # Create a new copy where any values in neighbors' domains that violate constraints are removed.
+            if inferences:
+                # If we've already done inferencing, use the existing inferences
+                old_domains = inferences
+            else:
+                # Otherwise, use the domains of the variables
+                old_domains = self.csp.get_all_domains()
+            new_domains = copy.deepcopy(old_domains)
+            for neighbor in self.csp.get_neighbors(variable):
+                for constraint_func in self.csp.get_constraints(variable, neighbor):
+                    # Reference old_domains so we're not modifying a collection in-place
+                    for neighbor_value in old_domains[neighbor]:
+                        if not constraint_func(value, neighbor_value):
+                            new_domains[neighbor].remove(neighbor_value)
+            # Also remove all other values from variable's domain
+            for old_value in old_domains[variable]:
+                if old_value != value:
+                    new_domains[variable].remove(old_value)
+            return new_domains
+        else:
+            # Naively return the domains of all variables (i.e. everything is valid)
+            return self.csp.get_all_domains()
