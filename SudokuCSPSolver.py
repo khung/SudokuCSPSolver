@@ -2,6 +2,8 @@ from tkinter import *
 from tkinter.ttk import *
 # Re-import tkinter's Label so we can use it even when it's overridden by ttk's import
 from tkinter import Label as TkLabel
+from sudoku_board import SudokuBoard
+from algorithms import AC3, BacktrackingSearch
 
 
 class Cell(Entry):
@@ -17,7 +19,7 @@ class Cell(Entry):
         command = (self.register(self.on_validate), "%P")
         self.configure(validate="key", validatecommand=command)
 
-    def on_validate(new_value):
+    def on_validate(self, new_value):
         if new_value == "":
             return True
         try:
@@ -32,6 +34,8 @@ class Cell(Entry):
 
 class SudokuBoardDisplay:
     def __init__(self):
+        # Store the current puzzle
+        self.puzzle = [[0 for i in range(9)] for j in range(9)]
         self.root = Tk()
         self.entries = []
         # These need to be instance variables so that mainloop will be able to reference the images when rendering
@@ -71,7 +75,8 @@ class SudokuBoardDisplay:
                     cols.append(item)
                 else:
                     item.grid(row=row, column=col)
-            self.entries.append(cols)
+            if len(cols) > 0:
+                self.entries.append(cols)
         # Toolbar
         toolbar = Frame(self.root)
         toolbar.pack(pady=10)
@@ -83,15 +88,50 @@ class SudokuBoardDisplay:
     def solve(self):
         """Solve the Sudoku puzzle."""
         # widget.after() to handle long-running process
-        pass
+        # Read cells and create Sudoku board
+        puzzle = []
+        for row in self.entries:
+            for entry in row:
+                value = entry.get()
+                digit = int(value) if value != '' else 0
+                puzzle.append(digit)
+                # Change GUI elements to read-only
+                entry.configure(state=DISABLED)
+        # Save off board
+        self.puzzle = puzzle
+        # Solve using selected options
+        board = SudokuBoard(initial_values=puzzle)
+        ac3_runner = AC3(board.generate_csp())
+        result = ac3_runner.run()
+        # Set values in GUI
+        for row in range(len(self.entries)):
+            for col in range(len(self.entries[row])):
+                entry = self.entries[row][col]
+                variable_name = str((row+1)*10 + (col+1))
+                # Need to re-enable to set text
+                entry.configure(state=NORMAL)
+                entry.delete('0', END)
+                entry.insert('0', str(result[variable_name][0]))
+                entry.configure(state=DISABLED)
 
     def reset(self):
         """Reset Sudoku board from solved state to original state."""
-        pass
+        for row in range(len(self.entries)):
+            for col in range(len(self.entries[row])):
+                entry = self.entries[row][col]
+                digit = self.puzzle[row*9 + col]
+                value = str(digit) if digit != 0 else ''
+                entry.configure(state=NORMAL)
+                entry.delete('0', END)
+                entry.insert('0', value)
 
     def clear(self):
         """Clear all cells in the Sudoku puzzle."""
-        pass
+        for row in range(len(self.entries)):
+            for col in range(len(self.entries[row])):
+                entry = self.entries[row][col]
+                entry.configure(state=NORMAL)
+                entry.delete('0', END)
 
 
 def main():
