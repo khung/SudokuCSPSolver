@@ -77,6 +77,15 @@ class SudokuBoardDisplay:
                     item.grid(row=row, column=col)
             if len(cols) > 0:
                 self.entries.append(cols)
+        # Fill out cells with initial values if applicable
+        if len(sys.argv) == 2:
+            for i in range(9):
+                for j in range(9):
+                    value = sys.argv[1][i*9 + j]
+                    # Keep value blank if 0
+                    if value == '0':
+                        value = ''
+                    self.entries[i][j].insert('0', value)
         # Toolbar
         toolbar = Frame(self.root)
         toolbar.pack(pady=10)
