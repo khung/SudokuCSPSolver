@@ -206,8 +206,8 @@ class BacktrackingSearch:
                 for neighbor in self.csp.get_neighbors(variable):
                     total_num_values += len(domains[neighbor])
                 ordered_values_temp.append([value, total_num_values])
-            # Sort by total number of values in neighbors ascending
-            ordered_values = sorted(ordered_values_temp, key=lambda x: x[1])
+            # Sort by total number of values in neighbors descending
+            ordered_values = sorted(ordered_values_temp, key=lambda x: x[1], reverse=True)
             ordered_values = [value[0] for value in ordered_values]
             return ordered_values
         else:
