@@ -164,7 +164,7 @@ class BacktrackingSearch:
         for value in self.order_domain_values(variable, assignment, inferences):
             if self.is_consistent(variable, value, assignment):
                 assignment[variable] = value
-                new_inferences = self.inference(variable, value, inferences)
+                new_inferences = self.inference(variable, value, self.inference_function, inferences)
                 # Only continue if there are valid inferences. Otherwise, it means there will be a variable with no
                 # valid assignment.
                 if new_inferences:
@@ -197,7 +197,19 @@ class BacktrackingSearch:
 
     def order_domain_values(self, variable, assignment: dict, inferences):
         if self.order_domain_values_heuristic == OrderDomainValuesHeuristics.LCV:
-            pass
+            # Least-constraining-value heuristic
+            # Prefer value that rules out the fewest choices for neighbors
+            ordered_values_temp = []
+            for value in self.csp.get_domain(variable):
+                domains = self.inference(variable, value, InferenceFunctions.ForwardChecking, inferences)
+                total_num_values = 0
+                for neighbor in self.csp.get_neighbors(variable):
+                    total_num_values += len(domains[neighbor])
+                ordered_values_temp.append([value, total_num_values])
+            # Sort by total number of values in neighbors ascending
+            ordered_values = sorted(ordered_values_temp, key=lambda x: x[1])
+            ordered_values = [value[0] for value in ordered_values]
+            return ordered_values
         else:
             # Naively select "next" value
             if inferences:
@@ -214,8 +226,9 @@ class BacktrackingSearch:
                         return False
         return True
 
-    def inference(self, variable, value, inferences=None):
-        if self.inference_function == InferenceFunctions.ForwardChecking:
+    # Allow passing in the inference function instead of checking class variable so that this can be re-used
+    def inference(self, variable, value, inference_function=None, inferences=None):
+        if inference_function == InferenceFunctions.ForwardChecking:
             # Create a new copy where any values in neighbors' domains that violate constraints are removed.
             if inferences:
                 # If we've already done inferencing, use the existing inferences

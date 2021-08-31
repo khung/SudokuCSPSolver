@@ -174,6 +174,19 @@ class TestAlgorithms(unittest.TestCase):
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
 
+    def test_backtracking_with_LCV(self):
+        sudoku_size = 4
+        solution_dict = {}
+        for i in range(sudoku_size):
+            for j in range(sudoku_size):
+                var_name = str((i + 1) * 10 + (j + 1))
+                solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i * sudoku_size + j]
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
+        csp = board.generate_csp()
+        backtracking_runner = BacktrackingSearch(csp, order_domain_values_heuristic=OrderDomainValuesHeuristics.LCV)
+        result = backtracking_runner.run()
+        self.assertDictEqual(solution_dict, result)
+
 
 if __name__ == '__main__':
     unittest.main()
