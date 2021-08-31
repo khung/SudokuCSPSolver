@@ -10,12 +10,10 @@ class SudokuBoard:
         if initial_values:
             if len(initial_values) != self.size*self.size:
                 raise ValueError("initial_values must contain {} items".format(self.size*self.size))
-            old_board = self.board.copy()
             for i in range(self.size):
                 for j in range(self.size):
                     self.board[i][j] = initial_values[i*self.size + j]
             if not self._is_valid():
-                self.board = old_board
                 raise ValueError("initial_values contains an invalid Sudoku puzzle")
 
     def set_cells(self, values: list):
@@ -39,7 +37,7 @@ class SudokuBoard:
             num_groups = 2
             index_groups = [[0, 1], [2, 3]]
         else:
-            raise ValueError("Invalid valid used for size")
+            raise ValueError("Invalid value used for size")
 
         row_range = [i for i in range(self.size)]
         col_range = [i for i in range(self.size)]
@@ -112,7 +110,7 @@ class SudokuBoard:
             num_groups = 2
             index_groups = [[1, 2], [3, 4]]
         else:
-            raise ValueError("Invalid valid used for size")
+            raise ValueError("Invalid value used for size")
         for i in range(1, self.size+1):
             row_group_indices = index_groups[(i-1)//num_groups]
             for j in range(1, self.size+1):
