@@ -1,3 +1,4 @@
+import math
 from collections import deque
 from enum import Enum, auto
 import copy
@@ -147,6 +148,9 @@ class BacktrackingSearch:
             self.inference_function = inference_function
         else:
             raise ValueError("Invalid value for inference_function")
+        if select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.MRV and \
+                inference_function == InferenceFunctions.none:
+            raise ValueError("Using the MRV heuristic requires an inference function")
         self.solution = None
 
     def run(self):
@@ -160,7 +164,7 @@ class BacktrackingSearch:
     def backtrack(self, assignment: dict, inferences):
         if self.complete_assignment(assignment):
             return assignment
-        variable = self.select_unassigned_variable(assignment)
+        variable = self.select_unassigned_variable(assignment, inferences)
         for value in self.order_domain_values(variable, assignment, inferences):
             if self.is_consistent(variable, value, assignment):
                 assignment[variable] = value
@@ -184,16 +188,48 @@ class BacktrackingSearch:
                 return False
         return True
 
-    def select_unassigned_variable(self, assignment: dict):
-        if self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.MRV:
-            pass
-        elif self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DegreeHeuristic:
-            pass
+    def select_unassigned_variable(self, assignment: dict, inferences):
+        if self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.MRV or\
+                self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DegreeHeuristic:
+            # Minimum-remaining-values heuristic
+            # Select the variable with the fewest number of possible values
+            if not inferences:
+                # Usually there will have been inferencing done to minimize the domain values, but at the beginning, use
+                # the whole domain.
+                inferences = self.csp.get_all_domains()
+            minimum_remaining_values = math.inf
+            maximum_num_constraints = 0
+            chosen_variable = None
+            for variable in self.csp.get_variables():
+                if variable not in assignment.keys():
+                    if len(inferences[variable]) < minimum_remaining_values:
+                        if self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DegreeHeuristic:
+                            maximum_num_constraints = self.get_num_constraints_with_unassigned_neighbors(assignment, variable)
+                        minimum_remaining_values = len(inferences[variable])
+                        chosen_variable = variable
+                    elif len(inferences[variable]) == minimum_remaining_values:
+                        if self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DegreeHeuristic:
+                            # Degree heuristic
+                            # Select variable with largest number of constraints on other unassigned variables as
+                            # tie-breaker for MRV.
+                            num_constraints = self.get_num_constraints_with_unassigned_neighbors(assignment, variable)
+                            if num_constraints > maximum_num_constraints:
+                                maximum_num_constraints = num_constraints
+                                minimum_remaining_values = len(inferences[variable])
+                                chosen_variable = variable
+            return chosen_variable
         else:
             # Naively select "next" variable
             for variable in self.csp.get_variables():
                 if variable not in assignment.keys():
                     return variable
+
+    def get_num_constraints_with_unassigned_neighbors(self, assignment: dict, variable):
+        maximum_num_constraints = 0
+        for neighbor in self.csp.get_neighbors(variable):
+            if neighbor not in assignment.keys():
+                maximum_num_constraints += len(self.csp.get_constraints(variable, neighbor))
+        return maximum_num_constraints
 
     def order_domain_values(self, variable, assignment: dict, inferences):
         if self.order_domain_values_heuristic == OrderDomainValuesHeuristics.LCV:

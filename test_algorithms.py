@@ -187,6 +187,110 @@ class TestAlgorithms(unittest.TestCase):
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
 
+    def test_backtracking_with_MRV(self):
+        sudoku_size = 4
+        solution_dict = {}
+        for i in range(sudoku_size):
+            for j in range(sudoku_size):
+                var_name = str((i + 1) * 10 + (j + 1))
+                solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i * sudoku_size + j]
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
+        csp = board.generate_csp()
+        backtracking_runner = BacktrackingSearch(
+            csp,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.MRV,
+            inference_function=InferenceFunctions.ForwardChecking
+        )
+        result = backtracking_runner.run()
+        self.assertDictEqual(solution_dict, result)
+
+    def test_backtracking_with_MRV_full(self):
+        sudoku_size = 9
+        solution_dict = {}
+        for i in range(sudoku_size):
+            for j in range(sudoku_size):
+                var_name = str((i + 1) * 10 + (j + 1))
+                solution_dict[var_name] = self.sudoku_solution_solvable[i * sudoku_size + j]
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_solvable, size=sudoku_size)
+        csp = board.generate_csp()
+        backtracking_runner = BacktrackingSearch(
+            csp,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.MRV,
+            inference_function=InferenceFunctions.ForwardChecking
+        )
+        result = backtracking_runner.run()
+        self.assertDictEqual(solution_dict, result)
+
+    def test_backtracking_with_DegreeHeuristic(self):
+        sudoku_size = 4
+        solution_dict = {}
+        for i in range(sudoku_size):
+            for j in range(sudoku_size):
+                var_name = str((i + 1) * 10 + (j + 1))
+                solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i * sudoku_size + j]
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
+        csp = board.generate_csp()
+        backtracking_runner = BacktrackingSearch(
+            csp,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
+            inference_function=InferenceFunctions.ForwardChecking
+        )
+        result = backtracking_runner.run()
+        self.assertDictEqual(solution_dict, result)
+
+    def test_backtracking_with_DegreeHeuristic_full(self):
+        sudoku_size = 9
+        solution_dict = {}
+        for i in range(sudoku_size):
+            for j in range(sudoku_size):
+                var_name = str((i + 1) * 10 + (j + 1))
+                solution_dict[var_name] = self.sudoku_solution_solvable[i * sudoku_size + j]
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_solvable, size=sudoku_size)
+        csp = board.generate_csp()
+        backtracking_runner = BacktrackingSearch(
+            csp,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
+            inference_function=InferenceFunctions.ForwardChecking
+        )
+        result = backtracking_runner.run()
+        self.assertDictEqual(solution_dict, result)
+
+    def test_backtracking_with_DegreeHeuristic_LCV(self):
+        sudoku_size = 4
+        solution_dict = {}
+        for i in range(sudoku_size):
+            for j in range(sudoku_size):
+                var_name = str((i + 1) * 10 + (j + 1))
+                solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i * sudoku_size + j]
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
+        csp = board.generate_csp()
+        backtracking_runner = BacktrackingSearch(
+            csp,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
+            order_domain_values_heuristic=OrderDomainValuesHeuristics.LCV,
+            inference_function=InferenceFunctions.ForwardChecking
+        )
+        result = backtracking_runner.run()
+        self.assertDictEqual(solution_dict, result)
+
+    def test_backtracking_with_DegreeHeuristic_LCV_full(self):
+        sudoku_size = 9
+        solution_dict = {}
+        for i in range(sudoku_size):
+            for j in range(sudoku_size):
+                var_name = str((i + 1) * 10 + (j + 1))
+                solution_dict[var_name] = self.sudoku_solution_solvable[i * sudoku_size + j]
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_solvable, size=sudoku_size)
+        csp = board.generate_csp()
+        backtracking_runner = BacktrackingSearch(
+            csp,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
+            order_domain_values_heuristic=OrderDomainValuesHeuristics.LCV,
+            inference_function=InferenceFunctions.ForwardChecking
+        )
+        result = backtracking_runner.run()
+        self.assertDictEqual(solution_dict, result)
+
 
 if __name__ == '__main__':
     unittest.main()
