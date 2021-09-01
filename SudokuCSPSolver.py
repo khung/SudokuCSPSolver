@@ -33,19 +33,12 @@ class Cell(Entry):
             return False
 
 
-class SudokuBoardDisplay:
-    def __init__(self):
-        # Store the current puzzle
-        self.puzzle = [[0 for i in range(9)] for j in range(9)]
-        self.root, self.entries, self.images, self.message, self.buttons = self.make_gui()
-        self.entry_disabled = False
-        # Fill out cells with initial values if applicable
-        if len(sys.argv) == 2:
-            self.set_board(values=sys.argv[1])
+class SudokuBoardView:
+    def __init__(self, root):
+        self.entries, self.images = self.make_gui(root)
 
-    def make_gui(self) -> tuple:
+    def make_gui(self, root) -> tuple:
         """Create the tk GUI."""
-        root = Tk()
         entries = []
         # These need to be instance variables so that mainloop will be able to reference the images when rendering
         images = {
@@ -54,9 +47,6 @@ class SudokuBoardDisplay:
             'v_separator_img': PhotoImage(file="v_separator.png")
         }
 
-        # Use grid manager and actual images of separators
-        board = Frame(root)
-        board.pack(expand=YES, fill=BOTH, padx=10, pady=10)
         # Manually set position of separators to avoid convoluted logic
         # . _ . _ . _ .. _ . _ . _ .. _ . _ . _ .
         separator_indices = [0, 2, 4, 6, 7, 9, 11, 13, 14, 16, 18, 20]
@@ -69,18 +59,18 @@ class SudokuBoardDisplay:
                 if row in separator_indices:
                     if col in separator_indices:
                         # We're at a point
-                        item = TkLabel(board, image=images['c_separator_img'], borderwidth=0)
+                        item = TkLabel(root, image=images['c_separator_img'], borderwidth=0)
                     else:
                         # We're at a horizontal separator
-                        item = TkLabel(board, image=images['h_separator_img'], borderwidth=0)
+                        item = TkLabel(root, image=images['h_separator_img'], borderwidth=0)
                 else:
                     if col in separator_indices:
                         # We're at a vertical separator
-                        item = TkLabel(board, image=images['v_separator_img'], borderwidth=0)
+                        item = TkLabel(root, image=images['v_separator_img'], borderwidth=0)
                     else:
                         # We're at the cell itself
                         in_cell = True
-                        item = Cell(board)
+                        item = Cell(root)
                 if in_cell:
                     item.grid(row=row, column=col, sticky=(N, S, E, W))
                     cols.append(item)
@@ -88,6 +78,58 @@ class SudokuBoardDisplay:
                     item.grid(row=row, column=col)
             if len(cols) > 0:
                 entries.append(cols)
+        return entries, images
+
+    def set_board(self, values, entry_disabled: bool) -> None:
+        """Tk commands to set the board."""
+        for row in range(len(self.entries)):
+            for col in range(len(self.entries[row])):
+                entry = self.entries[row][col]
+                # Keep value blank if 0
+                if type(values) is str:
+                    value = values[row * 9 + col] if values[row * 9 + col] != '0' else ''
+                else:
+                    # value is a 1D list of digits
+                    value = str(values[row*9 + col]) if values[row*9 + col] != 0 else ''
+                # Needs to enabled to set text
+                entry.configure(state=NORMAL)
+                entry.delete('0', END)
+                entry.insert('0', value)
+                if entry_disabled:
+                    entry.configure(state=DISABLED)
+
+    def reset_board(self, puzzle) -> None:
+        """Reset the board UI elements."""
+        self.set_board(values=puzzle, entry_disabled=False)
+
+    def clear_board(self) -> None:
+        """Clear board UI elements."""
+        self.set_board(values='0'*9*9, entry_disabled=False)
+
+
+class SudokuCSPSolver:
+    def __init__(self):
+        self.board_size = 9
+        self.root, self.board_view, self.message, self.buttons = self.make_gui()
+        self.entry_disabled = False
+        self.board = SudokuBoard(size=9)
+        # Fill out cells with initial values if applicable
+        if len(sys.argv) == 2:
+            self.board_view.set_board(values=sys.argv[1], entry_disabled=self.entry_disabled)
+        # Store the current puzzle
+        self.puzzle = self.board.to_list()
+
+    def run(self):
+        self.root.mainloop()
+
+    def make_gui(self) -> tuple:
+        """Create the tk GUI."""
+        root = Tk()
+
+        # Use grid manager and actual images of separators
+        board_frame = Frame(root)
+        board_frame.pack(expand=YES, fill=BOTH, padx=10, pady=10)
+        board = SudokuBoardView(board_frame)
         # Message bar
         message_bar = Frame(root)
         message_bar.pack()
@@ -107,7 +149,7 @@ class SudokuBoardDisplay:
         buttons['reset_button'].pack(side=LEFT, padx=5)
         buttons['clear_button'].pack(side=LEFT, padx=5)
         root.title("Sudoku CSP Solver")
-        return root, entries, images, message, buttons
+        return root, board, message, buttons
 
     def solve(self) -> None:
         """Solve the Sudoku puzzle."""
@@ -118,26 +160,26 @@ class SudokuBoardDisplay:
         puzzle_as_list = []
         for row in range(9):
             for col in range(9):
-                value = self.entries[row][col].get()
+                value = self.board_view.entries[row][col].get()
                 digit = int(value) if value != '' else 0
                 puzzle_as_list.append(digit)
-                # Save off board
-                self.puzzle[row][col] = digit
+                # Save off board. We don't use SudokuBoard.to_list() as it depends on a valid puzzle.
+                self.puzzle[row*9 + col] = digit
         try:
-            board = SudokuBoard(initial_values=puzzle_as_list)
+            self.board.set_cells(puzzle_as_list)
         except ValueError:
             self.set_message(text="There are duplicate values in a row, column, or region.", error=True)
             return
         # Disable GUI elements
         self.entry_disabled = True
-        for row in self.entries:
+        for row in self.board_view.entries:
             for entry in row:
                 entry.configure(state=DISABLED)
         # Need to remove keyboard focus when disabling button being pressed
         self.buttons['solve_button'].state(['disabled', '!focus'])
         self.buttons['clear_button'].state(['disabled'])
         # Solve using selected options
-        ac3_runner = AC3(board.generate_csp())
+        ac3_runner = AC3(self.board.generate_csp())
         result = ac3_runner.run()
         multiple_solutions = False
         for variable_name in result.keys():
@@ -150,7 +192,7 @@ class SudokuBoardDisplay:
         else:
             # Set values in GUI
             result_string = self.result_dict_to_string(result)
-            self.set_board(result_string)
+            self.board_view.set_board(values=result_string, entry_disabled=self.entry_disabled)
         # Allow resetting of puzzle
         self.buttons['reset_button'].state(['!disabled'])
 
@@ -163,43 +205,21 @@ class SudokuBoardDisplay:
         result_string = ''.join(result_list)
         return result_string
 
-    def set_board(self, values) -> None:
-        """Tk commands to set the board."""
-        for row in range(len(self.entries)):
-            for col in range(len(self.entries[row])):
-                entry = self.entries[row][col]
-                # Keep value blank if 0
-                if type(values) is str:
-                    value = values[row * 9 + col] if values[row * 9 + col] != '0' else ''
-                else:
-                    # value is a 2D list of digits
-                    value = str(values[row][col]) if values[row][col] != 0 else ''
-                # Needs to enabled to set text
-                entry.configure(state=NORMAL)
-                entry.delete('0', END)
-                entry.insert('0', value)
-                if self.entry_disabled:
-                    entry.configure(state=DISABLED)
-
     def reset(self) -> None:
         """Reset Sudoku board from solved state to original state."""
         # Remove any existing messages
         self.reset_message()
         self.entry_disabled = False
-        self.reset_board()
+        self.board_view.reset_board(self.puzzle)
         self.buttons['solve_button'].state(['!disabled'])
         self.buttons['reset_button'].state(['disabled', '!focus'])
         self.buttons['clear_button'].state(['!disabled'])
-
-    def reset_board(self) -> None:
-        """Reset the board UI elements."""
-        self.set_board(values=self.puzzle)
 
     def clear(self) -> None:
         """Clear all cells in the Sudoku puzzle."""
         # Remove any existing messages
         self.reset_message()
-        self.set_board(values='0'*9*9)
+        self.board_view.clear_board()
 
     def reset_message(self) -> None:
         """Reset the message UI element."""
@@ -212,8 +232,8 @@ class SudokuBoardDisplay:
 
 
 def main():
-    display = SudokuBoardDisplay()
-    display.root.mainloop()
+    solver = SudokuCSPSolver()
+    solver.run()
 
 
 if __name__ == "__main__":
