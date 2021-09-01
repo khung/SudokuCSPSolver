@@ -89,9 +89,16 @@ class SudokuBoardDisplay:
         # Toolbar
         toolbar = Frame(self.root)
         toolbar.pack(pady=10)
-        Button(toolbar, text="Solve", command=self.solve).pack(side=LEFT, padx=5)
-        Button(toolbar, text="Reset solver", command=self.reset).pack(side=LEFT, padx=5)
-        Button(toolbar, text="Clear all cells", command=self.clear).pack(side=LEFT, padx=5)
+        self.buttons = {
+            'solve_button': Button(toolbar, text="Solve", command=self.solve),
+            'reset_button': Button(toolbar, text="Reset solver", command=self.reset),
+            'clear_button': Button(toolbar, text="Clear all cells", command=self.clear)
+        }
+        # ttk buttons have more complex states than can be handled by the .configure command
+        self.buttons['reset_button'].state(['disabled'])
+        self.buttons['solve_button'].pack(side=LEFT, padx=5)
+        self.buttons['reset_button'].pack(side=LEFT, padx=5)
+        self.buttons['clear_button'].pack(side=LEFT, padx=5)
         self.root.title("Sudoku CSP Solver")
 
     def solve(self):
@@ -104,10 +111,15 @@ class SudokuBoardDisplay:
                 value = entry.get()
                 digit = int(value) if value != '' else 0
                 puzzle.append(digit)
-                # Change GUI elements to read-only
-                entry.configure(state=DISABLED)
         # Save off board
         self.puzzle = puzzle
+        # Disable GUI elements
+        for row in self.entries:
+            for entry in row:
+                entry.configure(state=DISABLED)
+        # Need to remove keyboard focus when disabling button being pressed
+        self.buttons['solve_button'].state(['disabled', '!focus'])
+        self.buttons['clear_button'].state(['disabled'])
         # Solve using selected options
         board = SudokuBoard(initial_values=puzzle)
         ac3_runner = AC3(board.generate_csp())
@@ -122,6 +134,8 @@ class SudokuBoardDisplay:
                 entry.delete('0', END)
                 entry.insert('0', str(result[variable_name][0]))
                 entry.configure(state=DISABLED)
+        # Allow resetting of puzzle
+        self.buttons['reset_button'].state(['!disabled'])
 
     def reset(self):
         """Reset Sudoku board from solved state to original state."""
@@ -133,6 +147,9 @@ class SudokuBoardDisplay:
                 entry.configure(state=NORMAL)
                 entry.delete('0', END)
                 entry.insert('0', value)
+        self.buttons['solve_button'].state(['!disabled'])
+        self.buttons['reset_button'].state(['disabled', '!focus'])
+        self.buttons['clear_button'].state(['!disabled'])
 
     def clear(self):
         """Clear all cells in the Sudoku puzzle."""
