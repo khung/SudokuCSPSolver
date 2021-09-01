@@ -86,6 +86,11 @@ class SudokuBoardDisplay:
                     if value == '0':
                         value = ''
                     self.entries[i][j].insert('0', value)
+        # Message bar
+        message_bar = Frame(self.root)
+        message_bar.pack()
+        self.message = Label(message_bar)
+        self.message.pack(side=LEFT, expand=YES, fill=BOTH)
         # Toolbar
         toolbar = Frame(self.root)
         toolbar.pack(pady=10)
@@ -104,6 +109,8 @@ class SudokuBoardDisplay:
     def solve(self):
         """Solve the Sudoku puzzle."""
         # widget.after() to handle long-running process
+        # Remove any existing messages
+        self.reset_message()
         # Read cells and create Sudoku board
         puzzle = []
         for row in self.entries:
@@ -113,6 +120,11 @@ class SudokuBoardDisplay:
                 puzzle.append(digit)
         # Save off board
         self.puzzle = puzzle
+        try:
+            board = SudokuBoard(initial_values=puzzle)
+        except ValueError:
+            self.set_message(text="There are duplicate values in a row, column, or region.", error=True)
+            return
         # Disable GUI elements
         for row in self.entries:
             for entry in row:
@@ -121,24 +133,34 @@ class SudokuBoardDisplay:
         self.buttons['solve_button'].state(['disabled', '!focus'])
         self.buttons['clear_button'].state(['disabled'])
         # Solve using selected options
-        board = SudokuBoard(initial_values=puzzle)
         ac3_runner = AC3(board.generate_csp())
         result = ac3_runner.run()
-        # Set values in GUI
-        for row in range(len(self.entries)):
-            for col in range(len(self.entries[row])):
-                entry = self.entries[row][col]
-                variable_name = str((row+1)*10 + (col+1))
-                # Need to re-enable to set text
-                entry.configure(state=NORMAL)
-                entry.delete('0', END)
-                entry.insert('0', str(result[variable_name][0]))
-                entry.configure(state=DISABLED)
+        multiple_solutions = False
+        for variable_name in result.keys():
+            if len(result[variable_name]) > 1:
+                multiple_solutions = True
+                break
+        if multiple_solutions:
+            self.set_message(text="There are multiple solutions to this puzzle.", error=True)
+        # If there are multiple solutions, keep original puzzle
+        else:
+            # Set values in GUI
+            for row in range(len(self.entries)):
+                for col in range(len(self.entries[row])):
+                    entry = self.entries[row][col]
+                    variable_name = str((row+1)*10 + (col+1))
+                    # Need to re-enable to set text
+                    entry.configure(state=NORMAL)
+                    entry.delete('0', END)
+                    entry.insert('0', str(result[variable_name][0]))
+                    entry.configure(state=DISABLED)
         # Allow resetting of puzzle
         self.buttons['reset_button'].state(['!disabled'])
 
     def reset(self):
         """Reset Sudoku board from solved state to original state."""
+        # Remove any existing messages
+        self.reset_message()
         for row in range(len(self.entries)):
             for col in range(len(self.entries[row])):
                 entry = self.entries[row][col]
@@ -153,11 +175,20 @@ class SudokuBoardDisplay:
 
     def clear(self):
         """Clear all cells in the Sudoku puzzle."""
+        # Remove any existing messages
+        self.reset_message()
         for row in range(len(self.entries)):
             for col in range(len(self.entries[row])):
                 entry = self.entries[row][col]
                 entry.configure(state=NORMAL)
                 entry.delete('0', END)
+
+    def reset_message(self):
+        self.message.configure(foreground='black', text="")
+
+    def set_message(self, text, error=False):
+        color = 'red' if error else 'black'
+        self.message.configure(foreground=color, text=text)
 
 
 def main():
