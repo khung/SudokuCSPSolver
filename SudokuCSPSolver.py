@@ -20,6 +20,7 @@ class Cell(Entry):
         self.configure(validate="key", validatecommand=command)
 
     def on_validate(self, new_value):
+        """Validate that the input is a digit between 1 and 9."""
         if new_value == "":
             return True
         try:
@@ -36,15 +37,25 @@ class SudokuBoardDisplay:
     def __init__(self):
         # Store the current puzzle
         self.puzzle = [[0 for i in range(9)] for j in range(9)]
-        self.root = Tk()
-        self.entries = []
+        self.root, self.entries, self.images, self.message, self.buttons = self.make_gui()
+        self.entry_disabled = False
+        # Fill out cells with initial values if applicable
+        if len(sys.argv) == 2:
+            self.set_board(values=sys.argv[1])
+
+    def make_gui(self) -> tuple:
+        """Create the tk GUI."""
+        root = Tk()
+        entries = []
         # These need to be instance variables so that mainloop will be able to reference the images when rendering
-        self.c_separator_img = PhotoImage(file="c_separator.png")
-        self.h_separator_img = PhotoImage(file="h_separator.png")
-        self.v_separator_img = PhotoImage(file="v_separator.png")
+        images = {
+            'c_separator_img': PhotoImage(file="c_separator.png"),
+            'h_separator_img': PhotoImage(file="h_separator.png"),
+            'v_separator_img': PhotoImage(file="v_separator.png")
+        }
 
         # Use grid manager and actual images of separators
-        board = Frame(self.root)
+        board = Frame(root)
         board.pack(expand=YES, fill=BOTH, padx=10, pady=10)
         # Manually set position of separators to avoid convoluted logic
         # . _ . _ . _ .. _ . _ . _ .. _ . _ . _ .
@@ -58,14 +69,14 @@ class SudokuBoardDisplay:
                 if row in separator_indices:
                     if col in separator_indices:
                         # We're at a point
-                        item = TkLabel(board, image=self.c_separator_img, borderwidth=0)
+                        item = TkLabel(board, image=images['c_separator_img'], borderwidth=0)
                     else:
                         # We're at a horizontal separator
-                        item = TkLabel(board, image=self.h_separator_img, borderwidth=0)
+                        item = TkLabel(board, image=images['h_separator_img'], borderwidth=0)
                 else:
                     if col in separator_indices:
                         # We're at a vertical separator
-                        item = TkLabel(board, image=self.v_separator_img, borderwidth=0)
+                        item = TkLabel(board, image=images['v_separator_img'], borderwidth=0)
                     else:
                         # We're at the cell itself
                         in_cell = True
@@ -76,56 +87,49 @@ class SudokuBoardDisplay:
                 else:
                     item.grid(row=row, column=col)
             if len(cols) > 0:
-                self.entries.append(cols)
-        # Fill out cells with initial values if applicable
-        if len(sys.argv) == 2:
-            for i in range(9):
-                for j in range(9):
-                    value = sys.argv[1][i*9 + j]
-                    # Keep value blank if 0
-                    if value == '0':
-                        value = ''
-                    self.entries[i][j].insert('0', value)
+                entries.append(cols)
         # Message bar
-        message_bar = Frame(self.root)
+        message_bar = Frame(root)
         message_bar.pack()
-        self.message = Label(message_bar)
-        self.message.pack(side=LEFT, expand=YES, fill=BOTH)
+        message = Label(message_bar)
+        message.pack(side=LEFT, expand=YES, fill=BOTH)
         # Toolbar
-        toolbar = Frame(self.root)
+        toolbar = Frame(root)
         toolbar.pack(pady=10)
-        self.buttons = {
+        buttons = {
             'solve_button': Button(toolbar, text="Solve", command=self.solve),
             'reset_button': Button(toolbar, text="Reset solver", command=self.reset),
             'clear_button': Button(toolbar, text="Clear all cells", command=self.clear)
         }
         # ttk buttons have more complex states than can be handled by the .configure command
-        self.buttons['reset_button'].state(['disabled'])
-        self.buttons['solve_button'].pack(side=LEFT, padx=5)
-        self.buttons['reset_button'].pack(side=LEFT, padx=5)
-        self.buttons['clear_button'].pack(side=LEFT, padx=5)
-        self.root.title("Sudoku CSP Solver")
+        buttons['reset_button'].state(['disabled'])
+        buttons['solve_button'].pack(side=LEFT, padx=5)
+        buttons['reset_button'].pack(side=LEFT, padx=5)
+        buttons['clear_button'].pack(side=LEFT, padx=5)
+        root.title("Sudoku CSP Solver")
+        return root, entries, images, message, buttons
 
-    def solve(self):
+    def solve(self) -> None:
         """Solve the Sudoku puzzle."""
         # widget.after() to handle long-running process
         # Remove any existing messages
         self.reset_message()
         # Read cells and create Sudoku board
-        puzzle = []
-        for row in self.entries:
-            for entry in row:
-                value = entry.get()
+        puzzle_as_list = []
+        for row in range(9):
+            for col in range(9):
+                value = self.entries[row][col].get()
                 digit = int(value) if value != '' else 0
-                puzzle.append(digit)
-        # Save off board
-        self.puzzle = puzzle
+                puzzle_as_list.append(digit)
+                # Save off board
+                self.puzzle[row][col] = digit
         try:
-            board = SudokuBoard(initial_values=puzzle)
+            board = SudokuBoard(initial_values=puzzle_as_list)
         except ValueError:
             self.set_message(text="There are duplicate values in a row, column, or region.", error=True)
             return
         # Disable GUI elements
+        self.entry_disabled = True
         for row in self.entries:
             for entry in row:
                 entry.configure(state=DISABLED)
@@ -142,51 +146,67 @@ class SudokuBoardDisplay:
                 break
         if multiple_solutions:
             self.set_message(text="There are multiple solutions to this puzzle.", error=True)
-        # If there are multiple solutions, keep original puzzle
+            # If there are multiple solutions, keep original puzzle
         else:
             # Set values in GUI
-            for row in range(len(self.entries)):
-                for col in range(len(self.entries[row])):
-                    entry = self.entries[row][col]
-                    variable_name = str((row+1)*10 + (col+1))
-                    # Need to re-enable to set text
-                    entry.configure(state=NORMAL)
-                    entry.delete('0', END)
-                    entry.insert('0', str(result[variable_name][0]))
-                    entry.configure(state=DISABLED)
+            result_string = self.result_dict_to_string(result)
+            self.set_board(result_string)
         # Allow resetting of puzzle
         self.buttons['reset_button'].state(['!disabled'])
 
-    def reset(self):
-        """Reset Sudoku board from solved state to original state."""
-        # Remove any existing messages
-        self.reset_message()
+    def result_dict_to_string(self, result: dict) -> str:
+        """Convert a result dictionary to a string for easy parsing."""
+        result_list = []
+        for var_name in sorted(result):
+            digit = result[var_name][0] if type(result[var_name]) is list else result[var_name]
+            result_list.append(str(digit))
+        result_string = ''.join(result_list)
+        return result_string
+
+    def set_board(self, values) -> None:
+        """Tk commands to set the board."""
         for row in range(len(self.entries)):
             for col in range(len(self.entries[row])):
                 entry = self.entries[row][col]
-                digit = self.puzzle[row*9 + col]
-                value = str(digit) if digit != 0 else ''
+                # Keep value blank if 0
+                if type(values) is str:
+                    value = values[row * 9 + col] if values[row * 9 + col] != '0' else ''
+                else:
+                    # value is a 2D list of digits
+                    value = str(values[row][col]) if values[row][col] != 0 else ''
+                # Needs to enabled to set text
                 entry.configure(state=NORMAL)
                 entry.delete('0', END)
                 entry.insert('0', value)
+                if self.entry_disabled:
+                    entry.configure(state=DISABLED)
+
+    def reset(self) -> None:
+        """Reset Sudoku board from solved state to original state."""
+        # Remove any existing messages
+        self.reset_message()
+        self.entry_disabled = False
+        self.reset_board()
         self.buttons['solve_button'].state(['!disabled'])
         self.buttons['reset_button'].state(['disabled', '!focus'])
         self.buttons['clear_button'].state(['!disabled'])
 
-    def clear(self):
+    def reset_board(self) -> None:
+        """Reset the board UI elements."""
+        self.set_board(values=self.puzzle)
+
+    def clear(self) -> None:
         """Clear all cells in the Sudoku puzzle."""
         # Remove any existing messages
         self.reset_message()
-        for row in range(len(self.entries)):
-            for col in range(len(self.entries[row])):
-                entry = self.entries[row][col]
-                entry.configure(state=NORMAL)
-                entry.delete('0', END)
+        self.set_board(values='0'*9*9)
 
-    def reset_message(self):
+    def reset_message(self) -> None:
+        """Reset the message UI element."""
         self.message.configure(foreground='black', text="")
 
-    def set_message(self, text, error=False):
+    def set_message(self, text: str, error: bool = False) -> None:
+        """Set the message UI element."""
         color = 'red' if error else 'black'
         self.message.configure(foreground=color, text=text)
 
