@@ -154,6 +154,15 @@ class OptionsPanelView(Frame):
         self.change_board_size_fn(self.board_size.get())
 
 
+class InfoPanelView(Frame):
+    def __init__(self, master=None, **kw):
+        super().__init__(master, **kw)
+        self.make_gui()
+
+    def make_gui(self):
+        Label(self, text="Information", font="TkHeadingFont 16").pack()
+
+
 class SudokuCSPSolver:
     def __init__(self):
         self.board_size = 9
@@ -164,12 +173,16 @@ class SudokuCSPSolver:
                 self.board_size = 9
             else:
                 raise ValueError("The initial puzzle string has an invalid length.")
-        self.root, self.board_views, self.message, self.buttons = self.make_gui()
+        self.root, self.board_views, self.main_panel, self.message, self.buttons = self.make_gui()
         self.board_view = self.board_views[self.board_size]
         # Hide the board(s) that are not active
         for size in self.board_views:
             if size != self.board_size:
                 self.board_views[size].grid_remove()
+        # Only show the options panel
+        for panel in self.main_panel:
+            if type(self.main_panel[panel]) is not OptionsPanelView:
+                self.main_panel[panel].grid_remove()
         self.entry_disabled = False
         # Fill out cells with initial values if applicable
         if len(sys.argv) == 2:
@@ -195,9 +208,13 @@ class SudokuCSPSolver:
             board_views[size].grid(row=0, column=size_index, padx=10, pady=10)
         # Main panel
         main_panel = {
-            'options_panel': OptionsPanelView(self.board_size, self.change_board_size, upper_part)
+            'options_panel': OptionsPanelView(self.board_size, self.change_board_size, upper_part),
+            'info_panel': InfoPanelView(upper_part)
         }
-        main_panel['options_panel'].grid(row=0, column=len(SudokuBoard.board_sizes), sticky=N, padx=10, pady=10)
+        column_index = len(SudokuBoard.board_sizes)
+        for panel in main_panel:
+            main_panel[panel].grid(row=0, column=column_index, sticky=N, padx=10, pady=10)
+            column_index += 1
 
         # Message bar
         message_bar = Frame(root)
@@ -218,7 +235,7 @@ class SudokuCSPSolver:
         buttons['reset_button'].pack(side=LEFT, padx=5)
         buttons['clear_button'].pack(side=LEFT, padx=5)
         root.title("Sudoku CSP Solver")
-        return root, board_views, message, buttons
+        return root, board_views, main_panel, message, buttons
 
     def solve(self) -> None:
         """Solve the Sudoku puzzle."""
@@ -249,6 +266,8 @@ class SudokuCSPSolver:
         # Need to remove keyboard focus when disabling button being pressed
         self.buttons['solve_button'].state(['disabled', '!focus'])
         self.buttons['clear_button'].state(['disabled'])
+        # Change to information panel
+        self.change_panel(InfoPanelView)
         # Solve using selected options
         ac3_runner = AC3(board.generate_csp())
         result = ac3_runner.run()
@@ -285,6 +304,7 @@ class SudokuCSPSolver:
         self.buttons['solve_button'].state(['!disabled'])
         self.buttons['reset_button'].state(['disabled', '!focus'])
         self.buttons['clear_button'].state(['!disabled'])
+        self.change_panel(OptionsPanelView)
 
     def clear(self) -> None:
         """Clear all cells in the Sudoku puzzle."""
@@ -308,6 +328,13 @@ class SudokuCSPSolver:
         self.board_size = size
         self.board_view = self.board_views[self.board_size]
         self.board_view.grid()
+
+    def change_panel(self, panel_type: type):
+        for panel in self.main_panel:
+            if type(self.main_panel[panel]) is not panel_type:
+                self.main_panel[panel].grid_remove()
+            else:
+                self.main_panel[panel].grid()
 
 
 def main():
