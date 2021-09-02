@@ -7,25 +7,26 @@ from algorithms import AC3, BacktrackingSearch
 
 
 class Cell(Entry):
-    def __init__(self, root):
+    def __init__(self, root, max_digit: int):
         super().__init__(
             root,
             width=1,
             font="Helvetica 20",
             justify="center"
         )
-        # Only allow 1 digit between 1-9 in entry
+        # Only allow 1 digit between 1-board_size in entry
         # Validation documentation under http://tcl.tk/man/tcl8.6/TkCmd/entry.htm#M16
         command = (self.register(self.on_validate), "%P")
         self.configure(validate="key", validatecommand=command)
+        self.max_digit = max_digit
 
     def on_validate(self, new_value):
-        """Validate that the input is a digit between 1 and 9."""
+        """Validate that the input is a digit between 1 and the board size (4 or 9)."""
         if new_value == "":
             return True
         try:
             value = int(new_value)
-            if 0 < value <= 9:
+            if 0 < value <= self.max_digit:
                 return True
             else:
                 return False
@@ -34,7 +35,8 @@ class Cell(Entry):
 
 
 class SudokuBoardView:
-    def __init__(self, root):
+    def __init__(self, root, board_size: int):
+        self.board_size = board_size
         self.entries, self.images = self.make_gui(root)
 
     def make_gui(self, root) -> tuple:
@@ -51,7 +53,7 @@ class SudokuBoardView:
         # . _ . _ . _ .. _ . _ . _ .. _ . _ . _ .
         separator_indices = [0, 2, 4, 6, 7, 9, 11, 13, 14, 16, 18, 20]
         # Range is (number of cells) x (cell + separator) + (remaining separator) + (num of extra-thickness separators)
-        range_end = 9*2+1+2
+        range_end = self.board_size*2+1+2
         for row in range(0, range_end):
             cols = []
             for col in range(0, range_end):
@@ -70,7 +72,7 @@ class SudokuBoardView:
                     else:
                         # We're at the cell itself
                         in_cell = True
-                        item = Cell(root)
+                        item = Cell(root, self.board_size)
                 if in_cell:
                     item.grid(row=row, column=col, sticky=(N, S, E, W))
                     cols.append(item)
@@ -82,15 +84,15 @@ class SudokuBoardView:
 
     def set_board(self, values, entry_disabled: bool) -> None:
         """Tk commands to set the board."""
-        for row in range(len(self.entries)):
-            for col in range(len(self.entries[row])):
+        for row in range(self.board_size):
+            for col in range(self.board_size):
                 entry = self.entries[row][col]
                 # Keep value blank if 0
                 if type(values) is str:
-                    value = values[row * 9 + col] if values[row * 9 + col] != '0' else ''
+                    value = values[row*self.board_size + col] if values[row*self.board_size + col] != '0' else ''
                 else:
                     # value is a 1D list of digits
-                    value = str(values[row*9 + col]) if values[row*9 + col] != 0 else ''
+                    value = str(values[row*self.board_size + col]) if values[row*self.board_size + col] != 0 else ''
                 # Needs to enabled to set text
                 entry.configure(state=NORMAL)
                 entry.delete('0', END)
@@ -104,7 +106,7 @@ class SudokuBoardView:
 
     def clear_board(self) -> None:
         """Clear board UI elements."""
-        self.set_board(values='0'*9*9, entry_disabled=False)
+        self.set_board(values='0'*self.board_size*self.board_size, entry_disabled=False)
 
 
 class SudokuCSPSolver:
@@ -112,14 +114,14 @@ class SudokuCSPSolver:
         self.board_size = 9
         self.root, self.board_view, self.message, self.buttons = self.make_gui()
         self.entry_disabled = False
-        self.board = SudokuBoard(size=9)
+        self.board = SudokuBoard(size=self.board_size)
         # Fill out cells with initial values if applicable
         if len(sys.argv) == 2:
             self.board_view.set_board(values=sys.argv[1], entry_disabled=self.entry_disabled)
         # Store the current puzzle
         self.puzzle = self.board.to_list()
 
-    def run(self):
+    def run(self) -> None:
         self.root.mainloop()
 
     def make_gui(self) -> tuple:
@@ -129,7 +131,7 @@ class SudokuCSPSolver:
         # Use grid manager and actual images of separators
         board_frame = Frame(root)
         board_frame.pack(expand=YES, fill=BOTH, padx=10, pady=10)
-        board = SudokuBoardView(board_frame)
+        board = SudokuBoardView(board_frame, self.board_size)
         # Message bar
         message_bar = Frame(root)
         message_bar.pack()
@@ -158,13 +160,13 @@ class SudokuCSPSolver:
         self.reset_message()
         # Read cells and create Sudoku board
         puzzle_as_list = []
-        for row in range(9):
-            for col in range(9):
+        for row in range(self.board_size):
+            for col in range(self.board_size):
                 value = self.board_view.entries[row][col].get()
                 digit = int(value) if value != '' else 0
                 puzzle_as_list.append(digit)
                 # Save off board. We don't use SudokuBoard.to_list() as it depends on a valid puzzle.
-                self.puzzle[row*9 + col] = digit
+                self.puzzle[row*self.board_size + col] = digit
         try:
             self.board.set_cells(puzzle_as_list)
         except ValueError:
