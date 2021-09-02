@@ -34,13 +34,14 @@ class Cell(Entry):
             return False
 
 
-class SudokuBoardView:
-    def __init__(self, root, board_size: int):
+class SudokuBoardView(Frame):
+    def __init__(self, board_size: int, master=None, **kw):
+        super().__init__(master, **kw)
         self.board_size = board_size
-        self.entries, self.images = self.make_gui(root)
+        self.entries, self.images = self.make_gui()
 
-    def make_gui(self, root) -> tuple:
-        """Create the tk GUI."""
+    def make_gui(self) -> tuple:
+        """Create the tk GUI elements using grid manager and images of separators."""
         entries = []
         # These need to be instance variables so that mainloop will be able to reference the images when rendering
         images = {
@@ -49,11 +50,19 @@ class SudokuBoardView:
             'v_separator_img': PhotoImage(file="v_separator.png")
         }
 
-        # Manually set position of separators to avoid convoluted logic
-        # . _ . _ . _ .. _ . _ . _ .. _ . _ . _ .
-        separator_indices = [0, 2, 4, 6, 7, 9, 11, 13, 14, 16, 18, 20]
-        # Range is (number of cells) x (cell + separator) + (remaining separator) + (num of extra-thickness separators)
-        range_end = self.board_size*2+1+2
+        if self.board_size == 9:
+            # Manually set position of separators to avoid convoluted logic
+            # . _ . _ . _ .. _ . _ . _ .. _ . _ . _ .
+            separator_indices = [0, 2, 4, 6, 7, 9, 11, 13, 14, 16, 18, 20]
+            # Range is (number of cells) x (cell + separator) + (remaining separator) + (num of extra-thickness separators)
+            range_end = self.board_size*2+1+2
+        elif self.board_size == 4:
+            # board size is 4
+            # . _ . _ .. _ . _ .
+            separator_indices = [0, 2, 4, 5, 7, 9]
+            range_end = self.board_size*2+1+1
+        else:
+            raise ValueError("self.board_size has an invalid value")
         for row in range(0, range_end):
             cols = []
             for col in range(0, range_end):
@@ -61,18 +70,18 @@ class SudokuBoardView:
                 if row in separator_indices:
                     if col in separator_indices:
                         # We're at a point
-                        item = TkLabel(root, image=images['c_separator_img'], borderwidth=0)
+                        item = TkLabel(self, image=images['c_separator_img'], borderwidth=0)
                     else:
                         # We're at a horizontal separator
-                        item = TkLabel(root, image=images['h_separator_img'], borderwidth=0)
+                        item = TkLabel(self, image=images['h_separator_img'], borderwidth=0)
                 else:
                     if col in separator_indices:
                         # We're at a vertical separator
-                        item = TkLabel(root, image=images['v_separator_img'], borderwidth=0)
+                        item = TkLabel(self, image=images['v_separator_img'], borderwidth=0)
                     else:
                         # We're at the cell itself
                         in_cell = True
-                        item = Cell(root, self.board_size)
+                        item = Cell(self, self.board_size)
                 if in_cell:
                     item.grid(row=row, column=col, sticky=(N, S, E, W))
                     cols.append(item)
@@ -109,17 +118,64 @@ class SudokuBoardView:
         self.set_board(values='0'*self.board_size*self.board_size, entry_disabled=False)
 
 
+class OptionsPanelView(Frame):
+    def __init__(self, board_size: int, change_board_size_fn, master=None, **kw):
+        super().__init__(master, **kw)
+        # A reference to the function is passed in so that the function call will not depend on the Tk hierarchy
+        self.change_board_size_fn = change_board_size_fn
+        self.options, self.board_size = self.make_gui(board_size)
+
+    def make_gui(self, size: int) -> tuple:
+        Label(self, text="Options", font="TkHeadingFont 16").pack(side=TOP)
+        Label(self, text="Board size:").pack(side=LEFT)
+        board_size = IntVar()
+        options = {
+            '9x9': Radiobutton(
+                self,
+                text="9x9",
+                command=self.on_press_board_size,
+                variable=board_size,
+                value=9),
+            '4x4': Radiobutton(
+                self,
+                text="4x4",
+                command=self.on_press_board_size,
+                variable=board_size,
+                value=4)
+        }
+        # Set initial value
+        board_size.set(size)
+        options['9x9'].pack(side=LEFT)
+        options['4x4'].pack(side=LEFT)
+        return options, board_size
+
+    def on_press_board_size(self):
+        # Call function in SudokuCSPSolver
+        self.change_board_size_fn(self.board_size.get())
+
+
 class SudokuCSPSolver:
     def __init__(self):
         self.board_size = 9
-        self.root, self.board_view, self.message, self.buttons = self.make_gui()
+        if len(sys.argv) == 2:
+            if len(sys.argv[1]) == 4*4:
+                self.board_size = 4
+            elif len(sys.argv[1]) == 9*9:
+                self.board_size = 9
+            else:
+                raise ValueError("The initial puzzle string has an invalid length.")
+        self.root, self.board_views, self.message, self.buttons = self.make_gui()
+        self.board_view = self.board_views[self.board_size]
+        # Hide the board(s) that are not active
+        for size in self.board_views:
+            if size != self.board_size:
+                self.board_views[size].grid_remove()
         self.entry_disabled = False
-        self.board = SudokuBoard(size=self.board_size)
         # Fill out cells with initial values if applicable
         if len(sys.argv) == 2:
             self.board_view.set_board(values=sys.argv[1], entry_disabled=self.entry_disabled)
         # Store the current puzzle
-        self.puzzle = self.board.to_list()
+        self.puzzle = None
 
     def run(self) -> None:
         self.root.mainloop()
@@ -128,10 +184,21 @@ class SudokuCSPSolver:
         """Create the tk GUI."""
         root = Tk()
 
-        # Use grid manager and actual images of separators
-        board_frame = Frame(root)
-        board_frame.pack(expand=YES, fill=BOTH, padx=10, pady=10)
-        board = SudokuBoardView(board_frame, self.board_size)
+        upper_part = Frame(root)
+        upper_part.pack()
+        # Draw all boards (4x4 and 9x9), hiding the inactive board later
+        # These need to use the grid manager so that the items can be hidden and shown without losing their place.
+        board_views = {}
+        for size_index in range(len(SudokuBoard.board_sizes)):
+            size = SudokuBoard.board_sizes[size_index]
+            board_views[size] = SudokuBoardView(size, upper_part)
+            board_views[size].grid(row=0, column=size_index, padx=10, pady=10)
+        # Main panel
+        main_panel = {
+            'options_panel': OptionsPanelView(self.board_size, self.change_board_size, upper_part)
+        }
+        main_panel['options_panel'].grid(row=0, column=len(SudokuBoard.board_sizes), sticky=N, padx=10, pady=10)
+
         # Message bar
         message_bar = Frame(root)
         message_bar.pack()
@@ -151,7 +218,7 @@ class SudokuCSPSolver:
         buttons['reset_button'].pack(side=LEFT, padx=5)
         buttons['clear_button'].pack(side=LEFT, padx=5)
         root.title("Sudoku CSP Solver")
-        return root, board, message, buttons
+        return root, board_views, message, buttons
 
     def solve(self) -> None:
         """Solve the Sudoku puzzle."""
@@ -165,10 +232,12 @@ class SudokuCSPSolver:
                 value = self.board_view.entries[row][col].get()
                 digit = int(value) if value != '' else 0
                 puzzle_as_list.append(digit)
-                # Save off board. We don't use SudokuBoard.to_list() as it depends on a valid puzzle.
-                self.puzzle[row*self.board_size + col] = digit
+        # Save off board. We don't use SudokuBoard.to_list() as it depends on a valid puzzle.
+        self.puzzle = puzzle_as_list
+        # Create the Sudoku
+        board = SudokuBoard(size=self.board_size)
         try:
-            self.board.set_cells(puzzle_as_list)
+            board.set_cells(puzzle_as_list)
         except ValueError:
             self.set_message(text="There are duplicate values in a row, column, or region.", error=True)
             return
@@ -181,7 +250,7 @@ class SudokuCSPSolver:
         self.buttons['solve_button'].state(['disabled', '!focus'])
         self.buttons['clear_button'].state(['disabled'])
         # Solve using selected options
-        ac3_runner = AC3(self.board.generate_csp())
+        ac3_runner = AC3(board.generate_csp())
         result = ac3_runner.run()
         multiple_solutions = False
         for variable_name in result.keys():
@@ -231,6 +300,14 @@ class SudokuCSPSolver:
         """Set the message UI element."""
         color = 'red' if error else 'black'
         self.message.configure(foreground=color, text=text)
+
+    def change_board_size(self, size: int):
+        # Hide current board
+        self.board_view.grid_remove()
+        # Show new board
+        self.board_size = size
+        self.board_view = self.board_views[self.board_size]
+        self.board_view.grid()
 
 
 def main():

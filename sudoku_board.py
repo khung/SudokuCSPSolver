@@ -2,8 +2,10 @@ from algorithms import ConstraintSatisfactionProblem
 
 
 class SudokuBoard:
-    def __init__(self, initial_values: list = None, size=9):
-        if size not in [4, 9]:
+    board_sizes = [4, 9]
+
+    def __init__(self, initial_values: list = None, size: int = 9):
+        if size not in SudokuBoard.board_sizes:
             raise ValueError("Invalid value for size")
         self.size = size
         self.board = [[0 for i in range(self.size)] for i in range(self.size)]
