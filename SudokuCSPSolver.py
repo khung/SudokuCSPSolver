@@ -41,7 +41,7 @@ class SudokuBoardView(Frame):
         self.entries, self.images = self.make_gui()
 
     def make_gui(self) -> tuple:
-        """Create the tk GUI elements using grid manager and images of separators."""
+        """Create the tk GUI elements using grid geometry manager and images of separators."""
         entries = []
         # These need to be instance variables so that mainloop will be able to reference the images when rendering
         images = {
@@ -126,18 +126,22 @@ class OptionsPanelView(Frame):
         self.options, self.board_size = self.make_gui(board_size)
 
     def make_gui(self, size: int) -> tuple:
-        Label(self, text="Options", font="TkHeadingFont 16").pack(side=TOP)
-        Label(self, text="Board size:").pack(side=LEFT)
+        Label(self, text="Options", font="TkHeadingFont 16").pack(fill=X)
+        # Spacer
+        Label(self).pack(side=TOP)
+        board_size_frame = Frame(self)
+        board_size_frame.pack()
+        Label(board_size_frame, text="Board size:").pack(side=LEFT)
         board_size = IntVar()
         options = {
             '9x9': Radiobutton(
-                self,
+                board_size_frame,
                 text="9x9",
                 command=self.on_press_board_size,
                 variable=board_size,
                 value=9),
             '4x4': Radiobutton(
-                self,
+                board_size_frame,
                 text="4x4",
                 command=self.on_press_board_size,
                 variable=board_size,
@@ -195,25 +199,44 @@ class SudokuCSPSolver:
 
     def make_gui(self) -> tuple:
         """Create the tk GUI."""
+        # Set dimensions for the two main panels of the application, to allow showing/hiding widgets without changing
+        # the size of the window.
+        board_frame_height = 500
+        board_frame_width = 500
+        panel_frame_width = 200
+
         root = Tk()
 
         upper_part = Frame(root)
         upper_part.pack()
         # Draw all boards (4x4 and 9x9), hiding the inactive board later
-        # These need to use the grid manager so that the items can be hidden and shown without losing their place.
+        # These need to use the grid geometry manager so that the items can be hidden and shown without losing their
+        # place.
+        # Set height/width so that the container size is kept no matter which board is used.
+        board_outer_frame = Frame(upper_part, height=board_frame_height, width=board_frame_width)
+        board_outer_frame.pack(side=LEFT)
+        # Stop the slaves' geometry manager from propagating the size to the master.
+        board_outer_frame.pack_propagate(False)
+        # We need an inner frame to center the container used by the grid geometry manager.
+        board_inner_frame = Frame(board_outer_frame)
+        board_inner_frame.pack(expand=YES)
         board_views = {}
         for size_index in range(len(SudokuBoard.board_sizes)):
             size = SudokuBoard.board_sizes[size_index]
-            board_views[size] = SudokuBoardView(size, upper_part)
-            board_views[size].grid(row=0, column=size_index, padx=10, pady=10)
+            board_views[size] = SudokuBoardView(size, board_inner_frame)
+            board_views[size].grid(row=0, column=size_index)
         # Main panel
+        # Similar trick as with the board frame, but no inner frame as the content does not need to be centered.
+        panel_frame = Frame(upper_part, width=panel_frame_width)
+        panel_frame.pack(side=LEFT, expand=YES, fill=BOTH)
+        panel_frame.grid_propagate(False)
         main_panel = {
-            'options_panel': OptionsPanelView(self.board_size, self.change_board_size, upper_part),
-            'info_panel': InfoPanelView(upper_part)
+            'options_panel': OptionsPanelView(self.board_size, self.change_board_size, panel_frame),
+            'info_panel': InfoPanelView(panel_frame)
         }
         column_index = len(SudokuBoard.board_sizes)
         for panel in main_panel:
-            main_panel[panel].grid(row=0, column=column_index, sticky=N, padx=10, pady=10)
+            main_panel[panel].grid(row=0, column=column_index, padx=20, pady=20)
             column_index += 1
 
         # Message bar
