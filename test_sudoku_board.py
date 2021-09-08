@@ -59,12 +59,12 @@ class TestSudokuBoard(unittest.TestCase):
         variables = []
         for i in range(1, size+1):
             for j in range(1, size+1):
-                variables.append(str(i * 10 + j))
+                variables.append(SudokuBoard.make_variable_name(i, j))
         self.assertEqual(variables, csp.variables)
         domain = [i for i in range(1, size+1)]
         for i in range(size):
             for j in range(size):
-                var_name = str((i+1) * 10 + (j+1))
+                var_name = variables[i*size + j]
                 value_index = i*size + j
                 reference_value = values[value_index]
                 if reference_value != 0:

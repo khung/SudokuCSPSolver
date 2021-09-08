@@ -92,8 +92,8 @@ class SudokuBoard:
         domains = []
         for i in range(self.size):
             for j in range(self.size):
-                # Add variables as 11, 12, ..., 98, 99
-                variables.append(str((i+1)*10 + (j+1)))
+                # Add variables as 1-1, 1-2, ..., 9-8, 9-9
+                variables.append(self.make_variable_name(i+1, j+1))
                 cell_value = self.get_cell_value(i, j)
                 # If there's a value, the domain is just that value. Otherwise, the initial domain is all digits 1-9
                 if cell_value:
@@ -116,14 +116,14 @@ class SudokuBoard:
         for i in range(1, self.size+1):
             row_group_indices = index_groups[(i-1)//num_groups]
             for j in range(1, self.size+1):
-                first_var = str(i*10 + j)
+                first_var = self.make_variable_name(i, j)
                 # AllDiff on rows
                 for k in range(j+1, self.size+1):
-                    second_var = str(i*10 + k)
+                    second_var = self.make_variable_name(i, k)
                     constraints.append((first_var, second_var, not_equal))
                 # AllDiff on columns
                 for k in range(i+1, self.size+1):
-                    second_var = str(k*10 + j)
+                    second_var = self.make_variable_name(k, j)
                     constraints.append((first_var, second_var, not_equal))
                 # AllDiff on regions
                 # This will have duplicates but the CSP class should take care of it when considering the constraints
@@ -131,7 +131,18 @@ class SudokuBoard:
                 for m in row_group_indices:
                     for n in col_group_indices:
                         if m != i and n != j:
-                            second_var = str(m*10 + n)
+                            second_var = self.make_variable_name(m, n)
                             constraints.append((first_var, second_var, not_equal))
         csp = ConstraintSatisfactionProblem(variables, domains, constraints)
         return csp
+
+    @staticmethod
+    def make_variable_name(i: int, j: int) -> str:
+        # Starts from 1, 1
+        return str(i) + '-' + str(j)
+
+    @staticmethod
+    def get_row_col_from_variable_name(variable_name: str) -> (int, int):
+        # Starts from 1, 1
+        strings = variable_name.split('-')
+        return int(strings[0]), int(strings[1])

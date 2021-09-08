@@ -91,7 +91,7 @@ class TestAlgorithms(unittest.TestCase):
         solution_dict = {}
         for i in range(9):
             for j in range(9):
-                var_name = str((i+1)*10 + (j+1))
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
                 solution_dict[var_name] = [self.sudoku_solution_solvable[i*9 + j]]
         board = SudokuBoard(initial_values=self.sudoku_puzzle_solvable)
         csp = board.generate_csp()
@@ -124,7 +124,7 @@ class TestAlgorithms(unittest.TestCase):
         solution_dict = {}
         for i in range(sudoku_size):
             for j in range(sudoku_size):
-                var_name = str((i+1)*10 + (j+1))
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
                 solution_dict[var_name] = [self.sudoku_solution_4x4_solvable[i*sudoku_size + j]]
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
@@ -153,7 +153,7 @@ class TestAlgorithms(unittest.TestCase):
         solution_dict = {}
         for i in range(sudoku_size):
             for j in range(sudoku_size):
-                var_name = str((i+1)*10 + (j+1))
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
                 solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i*sudoku_size + j]
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
@@ -166,7 +166,7 @@ class TestAlgorithms(unittest.TestCase):
         solution_dict = {}
         for i in range(sudoku_size):
             for j in range(sudoku_size):
-                var_name = str((i+1)*10 + (j+1))
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
                 solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i*sudoku_size + j]
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
@@ -179,7 +179,7 @@ class TestAlgorithms(unittest.TestCase):
         solution_dict = {}
         for i in range(sudoku_size):
             for j in range(sudoku_size):
-                var_name = str((i + 1) * 10 + (j + 1))
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
                 solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i * sudoku_size + j]
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
@@ -192,7 +192,7 @@ class TestAlgorithms(unittest.TestCase):
         solution_dict = {}
         for i in range(sudoku_size):
             for j in range(sudoku_size):
-                var_name = str((i + 1) * 10 + (j + 1))
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
                 solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i * sudoku_size + j]
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
@@ -209,7 +209,7 @@ class TestAlgorithms(unittest.TestCase):
         solution_dict = {}
         for i in range(sudoku_size):
             for j in range(sudoku_size):
-                var_name = str((i + 1) * 10 + (j + 1))
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
                 solution_dict[var_name] = self.sudoku_solution_solvable[i * sudoku_size + j]
         board = SudokuBoard(initial_values=self.sudoku_puzzle_solvable, size=sudoku_size)
         csp = board.generate_csp()
@@ -226,7 +226,7 @@ class TestAlgorithms(unittest.TestCase):
         solution_dict = {}
         for i in range(sudoku_size):
             for j in range(sudoku_size):
-                var_name = str((i + 1) * 10 + (j + 1))
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
                 solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i * sudoku_size + j]
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
@@ -243,7 +243,7 @@ class TestAlgorithms(unittest.TestCase):
         solution_dict = {}
         for i in range(sudoku_size):
             for j in range(sudoku_size):
-                var_name = str((i + 1) * 10 + (j + 1))
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
                 solution_dict[var_name] = self.sudoku_solution_solvable[i * sudoku_size + j]
         board = SudokuBoard(initial_values=self.sudoku_puzzle_solvable, size=sudoku_size)
         csp = board.generate_csp()
@@ -260,7 +260,7 @@ class TestAlgorithms(unittest.TestCase):
         solution_dict = {}
         for i in range(sudoku_size):
             for j in range(sudoku_size):
-                var_name = str((i + 1) * 10 + (j + 1))
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
                 solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i * sudoku_size + j]
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
@@ -278,7 +278,7 @@ class TestAlgorithms(unittest.TestCase):
         solution_dict = {}
         for i in range(sudoku_size):
             for j in range(sudoku_size):
-                var_name = str((i + 1) * 10 + (j + 1))
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
                 solution_dict[var_name] = self.sudoku_solution_solvable[i * sudoku_size + j]
         board = SudokuBoard(initial_values=self.sudoku_puzzle_solvable, size=sudoku_size)
         csp = board.generate_csp()
@@ -290,6 +290,34 @@ class TestAlgorithms(unittest.TestCase):
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
+
+    def test_ac3_history_on_solvable_4x4_sudoku(self):
+        sudoku_size = 4
+        solution_dict = {}
+        for i in range(sudoku_size):
+            for j in range(sudoku_size):
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
+                solution_dict[var_name] = [self.sudoku_solution_4x4_solvable[i*sudoku_size + j]]
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
+        csp = board.generate_csp()
+        ac3_runner = AC3(csp, record_history=True)
+        result = ac3_runner.run()
+        self.assertDictEqual(solution_dict, result)
+        self.assertTrue(len(ac3_runner.history) > 0)
+
+    def test_ac3_history_on_solvable_sudoku(self):
+        sudoku_size = 9
+        solution_dict = {}
+        for i in range(sudoku_size):
+            for j in range(sudoku_size):
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
+                solution_dict[var_name] = [self.sudoku_solution_solvable[i*sudoku_size + j]]
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_solvable, size=sudoku_size)
+        csp = board.generate_csp()
+        ac3_runner = AC3(csp, record_history=True)
+        result = ac3_runner.run()
+        self.assertDictEqual(solution_dict, result)
+        self.assertTrue(len(ac3_runner.history) > 0)
 
 
 if __name__ == '__main__':

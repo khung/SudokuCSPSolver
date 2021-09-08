@@ -57,11 +57,20 @@ class ConstraintSatisfactionProblem:
         self.domains[variable].remove(value)
 
 
+class AC3HistoryItems(Enum):
+    CURRENT_ARC = auto()
+    CURRENT_QUEUE = auto()
+    DOMAINS = auto()
+    MESSAGE = auto()
+
+
 class AC3:
-    def __init__(self, csp: ConstraintSatisfactionProblem):
+    def __init__(self, csp: ConstraintSatisfactionProblem, record_history=False):
         self.csp = csp
         self.solution = None
         self.is_consistent = False
+        self.record_history = record_history
+        self.history = []
 
     def run(self):
         self.is_consistent = self.run_algorithm()
@@ -80,16 +89,48 @@ class AC3:
         for first_var in self.csp.get_variables():
             for second_var in self.csp.get_neighbors(first_var):
                 queue.append((first_var, second_var))
+        if self.record_history:
+            history_item = {
+                AC3HistoryItems.CURRENT_ARC: None,
+                AC3HistoryItems.CURRENT_QUEUE: list(queue),
+                # Need to do a deep copy to preserve state of this variable
+                AC3HistoryItems.DOMAINS: copy.deepcopy(self.csp.get_all_domains()),
+                AC3HistoryItems.MESSAGE: "Initialized queue and domains"
+            }
+            self.history.append(history_item)
         # Turn the list into a FIFO queue
         queue = deque(queue)
         while len(queue) > 0:
+            history_item = {}
             first_var, second_var = queue.popleft()
+            if self.record_history:
+                history_item = {
+                    AC3HistoryItems.CURRENT_ARC: (first_var, second_var),
+                    AC3HistoryItems.CURRENT_QUEUE: list(queue),
+                    AC3HistoryItems.DOMAINS: copy.deepcopy(self.csp.get_all_domains()),
+                    AC3HistoryItems.MESSAGE: "Popped arc from queue"
+                }
+                self.history.append(history_item)
             if self.revise(first_var, second_var):
+                if self.record_history:
+                    history_item = {
+                        AC3HistoryItems.CURRENT_ARC: (first_var, second_var),
+                        AC3HistoryItems.DOMAINS: copy.deepcopy(self.csp.get_all_domains())
+                    }
                 if len(self.csp.get_domain(first_var)) == 0:
+                    if self.record_history:
+                        history_item[AC3HistoryItems.CURRENT_QUEUE] = list(queue)
+                        history_item[AC3HistoryItems.MESSAGE] = "Domain for variable '{}' is empty".format(str(first_var))
+                        self.history.append(history_item)
+                        return False
                     return False
                 for neighbor in self.csp.get_neighbors(first_var):
                     if neighbor != second_var:
                         queue.append((neighbor, first_var))
+                if self.record_history:
+                    history_item[AC3HistoryItems.CURRENT_QUEUE] = list(queue)
+                    history_item[AC3HistoryItems.MESSAGE] = "Updated domains and queue"
+                    self.history.append(history_item)
         return True
 
     def revise(self, first_var, second_var) -> bool:
