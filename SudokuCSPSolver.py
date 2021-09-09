@@ -330,6 +330,7 @@ class StepControlButtons(Enum):
 
 
 class InfoPanelSectionsAC3(Enum):
+    MESSAGE = auto()
     CURRENT_ARC = auto()
     CURRENT_QUEUE = auto()
 
@@ -347,6 +348,7 @@ class InfoPanelView(Frame):
     def make_gui(self) -> (Entry, Label, dict, dict):
         text_box_width = 40
         Label(self, text="Information", font="TkHeadingFont 16").pack()
+        # Step #/#
         step_frame = Frame(self)
         step_frame.pack()
         step_info_frame = Frame(self)
@@ -372,11 +374,19 @@ class InfoPanelView(Frame):
         step_controls[StepControlButtons.LAST].pack(side=LEFT)
         section_frame = Frame(self)
         section_frame.pack()
+        # Step message
+        message_frame = Frame(section_frame)
+        message_frame.pack(anchor=W)
+        Label(message_frame, text="Action:").pack(side=LEFT)
+        message_text = Label(message_frame)
+        message_text.pack(side=LEFT)
+        # Current arc
         arc_frame = Frame(section_frame)
         arc_frame.pack(anchor=W)
         Label(arc_frame, text="Current arc:").pack(side=LEFT)
         arc_text = Label(arc_frame)
         arc_text.pack(side=LEFT)
+        # Current queue
         queue_frame = Frame(section_frame)
         queue_frame.pack(anchor=W)
         Label(queue_frame, text="Current queue:").pack(anchor=W)
@@ -386,6 +396,7 @@ class InfoPanelView(Frame):
         queue_text.configure(state=DISABLED)
         # Create a dictionary of updatable sections
         sections = {
+            InfoPanelSectionsAC3.MESSAGE: message_text,
             InfoPanelSectionsAC3.CURRENT_ARC: arc_text,
             InfoPanelSectionsAC3.CURRENT_QUEUE: queue_text
         }
@@ -436,7 +447,10 @@ class InfoPanelView(Frame):
             self.step_controls[StepControlButtons.LAST].state(['!disabled', '!focus'])
 
     def set_section(self, section: InfoPanelSectionsAC3, obj) -> None:
-        if section == InfoPanelSectionsAC3.CURRENT_ARC:
+        if section == InfoPanelSectionsAC3.MESSAGE:
+            obj_string = obj if obj is not None else ""
+            self.sections[section].configure(text=obj_string)
+        elif section == InfoPanelSectionsAC3.CURRENT_ARC:
             obj_string = "{}, {}".format(obj[0], obj[1]) if obj is not None else ""
             self.sections[section].configure(text=obj_string)
         elif section == InfoPanelSectionsAC3.CURRENT_QUEUE:
@@ -458,6 +472,7 @@ class InfoPanelView(Frame):
         self.current_step_entry.delete('0', END)
         self.set_total_steps(0)
         self.set_step_controls()
+        self.set_section(InfoPanelSectionsAC3.MESSAGE, None)
         self.set_section(InfoPanelSectionsAC3.CURRENT_ARC, None)
         self.set_section(InfoPanelSectionsAC3.CURRENT_QUEUE, None)
 
@@ -698,6 +713,10 @@ class SudokuCSPSolver:
         self.main_panel['info_panel'].set_step_controls()
         # Change all necessary widgets to reflect info in new step
         self.main_panel['info_panel'].set_section(
+            InfoPanelSectionsAC3.MESSAGE,
+            history_step[AC3HistoryItems.MESSAGE]
+        )
+        self.main_panel['info_panel'].set_section(
             InfoPanelSectionsAC3.CURRENT_ARC,
             history_step[AC3HistoryItems.CURRENT_ARC]
         )
@@ -706,7 +725,6 @@ class SudokuCSPSolver:
             history_step[AC3HistoryItems.CURRENT_QUEUE]
         )
         self.board_view.set_domains(history_step[AC3HistoryItems.DOMAINS])
-        self.set_message(history_step[AC3HistoryItems.MESSAGE])
 
 
 def main():
