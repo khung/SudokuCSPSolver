@@ -71,6 +71,19 @@ class TestAlgorithms(unittest.TestCase):
         4, 1, 2, 3
     ]
 
+    @staticmethod
+    def make_solution_dict(solution: list, size: int, algorithm_type: AlgorithmTypes) -> dict:
+        solution_dict = {}
+        for i in range(size):
+            for j in range(size):
+                var_name = SudokuBoard.make_variable_name(i+1, j+1)
+                value = solution[i * size + j]
+                if algorithm_type == AlgorithmTypes.AC3:
+                    # AC3 can return more than one value if there isn't a complete assignment.
+                    value = [value]
+                solution_dict[var_name] = value
+        return solution_dict
+
     def test_ac3_on_trivial_csp(self):
         def not_equal(v1, v2):
             return v1 != v2
@@ -88,11 +101,12 @@ class TestAlgorithms(unittest.TestCase):
         self.assertDictEqual(solution, result)
 
     def test_ac3_on_solvable_sudoku(self):
-        solution_dict = {}
-        for i in range(9):
-            for j in range(9):
-                var_name = SudokuBoard.make_variable_name(i+1, j+1)
-                solution_dict[var_name] = [self.sudoku_solution_solvable[i*9 + j]]
+        sudoku_size = 9
+        solution_dict = self.make_solution_dict(
+            solution=self.sudoku_solution_solvable,
+            size=sudoku_size,
+            algorithm_type=AlgorithmTypes.AC3
+        )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_solvable)
         csp = board.generate_csp()
         ac3_runner = AC3(csp)
@@ -121,11 +135,11 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_ac3_on_solvable_4x4_sudoku(self):
         sudoku_size = 4
-        solution_dict = {}
-        for i in range(sudoku_size):
-            for j in range(sudoku_size):
-                var_name = SudokuBoard.make_variable_name(i+1, j+1)
-                solution_dict[var_name] = [self.sudoku_solution_4x4_solvable[i*sudoku_size + j]]
+        solution_dict = self.make_solution_dict(
+            solution=self.sudoku_solution_4x4_solvable,
+            size=sudoku_size,
+            algorithm_type=AlgorithmTypes.AC3
+        )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
         ac3_runner = AC3(csp)
@@ -150,11 +164,11 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_backtracking_on_solvable_sudoku(self):
         sudoku_size = 4
-        solution_dict = {}
-        for i in range(sudoku_size):
-            for j in range(sudoku_size):
-                var_name = SudokuBoard.make_variable_name(i+1, j+1)
-                solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i*sudoku_size + j]
+        solution_dict = self.make_solution_dict(
+            solution=self.sudoku_solution_4x4_solvable,
+            size=sudoku_size,
+            algorithm_type=AlgorithmTypes.BACKTRACKING_SEARCH
+        )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(csp)
@@ -163,11 +177,11 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_backtracking_with_forward_checking(self):
         sudoku_size = 4
-        solution_dict = {}
-        for i in range(sudoku_size):
-            for j in range(sudoku_size):
-                var_name = SudokuBoard.make_variable_name(i+1, j+1)
-                solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i*sudoku_size + j]
+        solution_dict = self.make_solution_dict(
+            solution=self.sudoku_solution_4x4_solvable,
+            size=sudoku_size,
+            algorithm_type=AlgorithmTypes.BACKTRACKING_SEARCH
+        )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(csp, inference_function=InferenceFunctions.ForwardChecking)
@@ -176,11 +190,11 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_backtracking_with_LCV(self):
         sudoku_size = 4
-        solution_dict = {}
-        for i in range(sudoku_size):
-            for j in range(sudoku_size):
-                var_name = SudokuBoard.make_variable_name(i+1, j+1)
-                solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i * sudoku_size + j]
+        solution_dict = self.make_solution_dict(
+            solution=self.sudoku_solution_4x4_solvable,
+            size=sudoku_size,
+            algorithm_type=AlgorithmTypes.BACKTRACKING_SEARCH
+        )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(csp, order_domain_values_heuristic=OrderDomainValuesHeuristics.LCV)
@@ -189,11 +203,11 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_backtracking_with_MRV(self):
         sudoku_size = 4
-        solution_dict = {}
-        for i in range(sudoku_size):
-            for j in range(sudoku_size):
-                var_name = SudokuBoard.make_variable_name(i+1, j+1)
-                solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i * sudoku_size + j]
+        solution_dict = self.make_solution_dict(
+            solution=self.sudoku_solution_4x4_solvable,
+            size=sudoku_size,
+            algorithm_type=AlgorithmTypes.BACKTRACKING_SEARCH
+        )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
@@ -206,11 +220,11 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_backtracking_with_MRV_full(self):
         sudoku_size = 9
-        solution_dict = {}
-        for i in range(sudoku_size):
-            for j in range(sudoku_size):
-                var_name = SudokuBoard.make_variable_name(i+1, j+1)
-                solution_dict[var_name] = self.sudoku_solution_solvable[i * sudoku_size + j]
+        solution_dict = self.make_solution_dict(
+            solution=self.sudoku_solution_solvable,
+            size=sudoku_size,
+            algorithm_type=AlgorithmTypes.BACKTRACKING_SEARCH
+        )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_solvable, size=sudoku_size)
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
@@ -223,11 +237,11 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_backtracking_with_DegreeHeuristic(self):
         sudoku_size = 4
-        solution_dict = {}
-        for i in range(sudoku_size):
-            for j in range(sudoku_size):
-                var_name = SudokuBoard.make_variable_name(i+1, j+1)
-                solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i * sudoku_size + j]
+        solution_dict = self.make_solution_dict(
+            solution=self.sudoku_solution_4x4_solvable,
+            size=sudoku_size,
+            algorithm_type=AlgorithmTypes.BACKTRACKING_SEARCH
+        )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
@@ -240,11 +254,11 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_backtracking_with_DegreeHeuristic_full(self):
         sudoku_size = 9
-        solution_dict = {}
-        for i in range(sudoku_size):
-            for j in range(sudoku_size):
-                var_name = SudokuBoard.make_variable_name(i+1, j+1)
-                solution_dict[var_name] = self.sudoku_solution_solvable[i * sudoku_size + j]
+        solution_dict = self.make_solution_dict(
+            solution=self.sudoku_solution_solvable,
+            size=sudoku_size,
+            algorithm_type=AlgorithmTypes.BACKTRACKING_SEARCH
+        )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_solvable, size=sudoku_size)
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
@@ -257,11 +271,11 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_backtracking_with_DegreeHeuristic_LCV(self):
         sudoku_size = 4
-        solution_dict = {}
-        for i in range(sudoku_size):
-            for j in range(sudoku_size):
-                var_name = SudokuBoard.make_variable_name(i+1, j+1)
-                solution_dict[var_name] = self.sudoku_solution_4x4_solvable[i * sudoku_size + j]
+        solution_dict = self.make_solution_dict(
+            solution=self.sudoku_solution_4x4_solvable,
+            size=sudoku_size,
+            algorithm_type=AlgorithmTypes.BACKTRACKING_SEARCH
+        )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
@@ -275,11 +289,11 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_backtracking_with_DegreeHeuristic_LCV_full(self):
         sudoku_size = 9
-        solution_dict = {}
-        for i in range(sudoku_size):
-            for j in range(sudoku_size):
-                var_name = SudokuBoard.make_variable_name(i+1, j+1)
-                solution_dict[var_name] = self.sudoku_solution_solvable[i * sudoku_size + j]
+        solution_dict = self.make_solution_dict(
+            solution=self.sudoku_solution_solvable,
+            size=sudoku_size,
+            algorithm_type=AlgorithmTypes.BACKTRACKING_SEARCH
+        )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_solvable, size=sudoku_size)
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
@@ -293,11 +307,11 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_ac3_history_on_solvable_4x4_sudoku(self):
         sudoku_size = 4
-        solution_dict = {}
-        for i in range(sudoku_size):
-            for j in range(sudoku_size):
-                var_name = SudokuBoard.make_variable_name(i+1, j+1)
-                solution_dict[var_name] = [self.sudoku_solution_4x4_solvable[i*sudoku_size + j]]
+        solution_dict = self.make_solution_dict(
+            solution=self.sudoku_solution_4x4_solvable,
+            size=sudoku_size,
+            algorithm_type=AlgorithmTypes.AC3
+        )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
         ac3_runner = AC3(csp, record_history=True)
@@ -307,11 +321,11 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_ac3_history_on_solvable_sudoku(self):
         sudoku_size = 9
-        solution_dict = {}
-        for i in range(sudoku_size):
-            for j in range(sudoku_size):
-                var_name = SudokuBoard.make_variable_name(i+1, j+1)
-                solution_dict[var_name] = [self.sudoku_solution_solvable[i*sudoku_size + j]]
+        solution_dict = self.make_solution_dict(
+            solution=self.sudoku_solution_solvable,
+            size=sudoku_size,
+            algorithm_type=AlgorithmTypes.AC3
+        )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_solvable, size=sudoku_size)
         csp = board.generate_csp()
         ac3_runner = AC3(csp, record_history=True)

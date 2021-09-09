@@ -4,6 +4,11 @@ from enum import Enum, auto
 import copy
 
 
+class AlgorithmTypes(Enum):
+    AC3 = auto()
+    BACKTRACKING_SEARCH = auto()
+
+
 # Define what a constraint satisfaction problem should consist of
 class ConstraintSatisfactionProblem:
     def __init__(self, variables: list, domains: list, constraints: list):
