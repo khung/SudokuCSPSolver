@@ -1,10 +1,10 @@
 import math
 from collections import deque
-from enum import Enum, auto
+from enum import Enum, IntEnum, auto
 import copy
 
 
-class AlgorithmTypes(Enum):
+class AlgorithmTypes(IntEnum):
     AC3 = auto()
     BACKTRACKING_SEARCH = auto()
 
@@ -96,7 +96,7 @@ class AC3:
                 queue.append((first_var, second_var))
         if self.record_history:
             history_item = {
-                AC3HistoryItems.CURRENT_ARC: None,
+                AC3HistoryItems.CURRENT_ARC: (),
                 AC3HistoryItems.CURRENT_QUEUE: list(queue),
                 # Need to do a deep copy to preserve state of this variable
                 AC3HistoryItems.DOMAINS: copy.deepcopy(self.csp.get_all_domains()),
@@ -170,13 +170,23 @@ class InferenceFunctions(Enum):
     ForwardChecking = auto()
 
 
+class BacktrackingSearchHistoryItems(Enum):
+    CURRENT_VARIABLE = auto()
+    ORDERED_VALUES = auto()
+    CURRENT_VALUE = auto()
+    INFERENCES = auto()
+    CURRENT_ASSIGNMENT = auto()
+    MESSAGE = auto()
+
+
 class BacktrackingSearch:
     def __init__(
             self,
             csp: ConstraintSatisfactionProblem,
             select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.none,
             order_domain_values_heuristic=OrderDomainValuesHeuristics.none,
-            inference_function=InferenceFunctions.none
+            inference_function=InferenceFunctions.none,
+            record_history=False
     ):
         self.csp = csp
         self.select_unassigned_variable_heuristic = None
@@ -198,6 +208,8 @@ class BacktrackingSearch:
                 inference_function == InferenceFunctions.none:
             raise ValueError("Using the MRV heuristic requires an inference function")
         self.solution = None
+        self.record_history = record_history
+        self.history = []
 
     def run(self):
         self.solution = self.run_algorithm()
@@ -209,22 +221,91 @@ class BacktrackingSearch:
 
     def backtrack(self, assignment: dict, inferences):
         if self.complete_assignment(assignment):
+            if self.record_history:
+                history_item = self.create_history_item(
+                    assignment=assignment,
+                    inferences=inferences,
+                    message="Assignment is complete"
+                )
+                self.history.append(history_item)
             return assignment
         variable = self.select_unassigned_variable(assignment, inferences)
-        for value in self.order_domain_values(variable, assignment, inferences):
+        ordered_values = self.order_domain_values(variable, assignment, inferences)
+        for value in ordered_values:
+            if self.record_history:
+                history_item = self.create_history_item(
+                    assignment=assignment,
+                    inferences=inferences,
+                    current_variable=variable,
+                    current_value=value,
+                    ordered_values=ordered_values,
+                    message="Selected variable and value"
+                )
+                self.history.append(history_item)
             if self.is_consistent(variable, value, assignment):
                 assignment[variable] = value
                 new_inferences = self.inference(variable, value, self.inference_function, inferences)
+                if self.record_history:
+                    history_item = self.create_history_item(
+                        assignment=assignment,
+                        inferences=new_inferences,
+                        current_variable=variable,
+                        current_value=value,
+                        ordered_values=ordered_values,
+                        message="Updated assignment and inferences"
+                    )
+                    self.history.append(history_item)
                 # Only continue if there are valid inferences. Otherwise, it means there will be a variable with no
                 # valid assignment.
-                if new_inferences:
+                new_inferences_valid = self.all_domains_have_values(new_inferences)
+                if new_inferences_valid:
                     result = self.backtrack(assignment, new_inferences)
                     if result:
                         return result
+            else:
+                if self.record_history:
+                    history_item = self.create_history_item(
+                        assignment=assignment,
+                        inferences=inferences,
+                        current_variable=variable,
+                        current_value=value,
+                        ordered_values=ordered_values,
+                        message="Value is not consistent with assignment"
+                    )
+                    self.history.append(history_item)
         # Need to remove variable assignment as the assignment variable is mutable, so it is passed by reference.
         if variable in assignment.keys():
             del assignment[variable]
+        if self.record_history:
+            history_item = self.create_history_item(
+                assignment=assignment,
+                inferences=inferences,
+                current_variable=variable,
+                ordered_values=ordered_values,
+                message="No remaining variable's values satisfy current assignment. Backtracking..."
+            )
+            self.history.append(history_item)
         return None
+
+    @staticmethod
+    def create_history_item(
+            current_variable: str = None,
+            ordered_values: list = None,
+            current_value = None,
+            inferences = None,
+            assignment: dict = None,
+            message: str = None
+    ) -> dict:
+        history_item = {
+            BacktrackingSearchHistoryItems.CURRENT_VARIABLE: current_variable,
+            BacktrackingSearchHistoryItems.ORDERED_VALUES: copy.copy(ordered_values),
+            BacktrackingSearchHistoryItems.CURRENT_VALUE: current_value,
+            # Dictionaries need to be deep copies to store the current state
+            BacktrackingSearchHistoryItems.INFERENCES: copy.deepcopy(inferences),
+            BacktrackingSearchHistoryItems.CURRENT_ASSIGNMENT: copy.deepcopy(assignment),
+            BacktrackingSearchHistoryItems.MESSAGE: message
+        }
+        return history_item
 
     def complete_assignment(self, assignment: dict) -> bool:
         for variable in self.csp.get_variables():
@@ -333,3 +414,10 @@ class BacktrackingSearch:
         else:
             # Naively return the domains of all variables (i.e. everything is valid)
             return self.csp.get_all_domains()
+
+    @staticmethod
+    def all_domains_have_values(domains: dict) -> bool:
+        for variable_name in domains.keys():
+            if len(domains[variable_name]) == 0:
+                return False
+        return True
