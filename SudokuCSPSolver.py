@@ -73,16 +73,15 @@ class SolverCell(Frame):
     def make_gui(self):
         domain = []
         digit = 1
-        # TODO: Font and padding choices seem to make it slightly off-center
+        # Positioning is not ideal (horizontal spacing is a bit too narrow), but this seems to be the best Tk can do.
         if self.max_digit == 9:
             range_end = 3
-            # font = "TkTextFont 8" may be better
             font = "Helvetica 7"
             x_padding = 2
         elif self.max_digit == 4:
             range_end = 2
-            font = "Helvetica 14"
-            x_padding = 3
+            font = "Helvetica 13"
+            x_padding = 2
         else:
             raise ValueError("self.max_digit has an invalid value")
         # Create an inner frame to center the grid
@@ -94,12 +93,17 @@ class SolverCell(Frame):
                     inner_frame,
                     text=str(digit),
                     font=font,
-                    style=self.unselected_cell_label
+                    style=self.unselected_cell_label,
+                    width=1,
+                    justify="center"
                 )
                 # Options needed for background to fill correctly
                 domain_value_label.grid(row=row, column=col, ipadx=x_padding, sticky=NSEW)
                 domain.append(domain_value_label)
                 digit += 1
+        for i in range(range_end):
+            inner_frame.columnconfigure(i, weight=1)
+            inner_frame.rowconfigure(i, weight=1)
         return domain
 
     def update_domain(self, new_domain: list):
@@ -218,7 +222,7 @@ class SudokuBoardBaseView(Frame):
                         else:
                             item = Cell(self.board_size, self)
                 if in_cell:
-                    item.grid(row=row, column=col, sticky=(N, S, E, W))
+                    item.grid(row=row, column=col, sticky=NSEW)
                     cols.append(item)
                 else:
                     item.grid(row=row, column=col)
