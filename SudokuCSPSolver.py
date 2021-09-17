@@ -1008,7 +1008,11 @@ class SudokuCSPSolver:
             self.board_view.clear_all_highlighted_values()
             current_variable = history_step[BacktrackingSearchHistoryItems.CURRENT_VARIABLE]
             if current_variable is not None:
-                self.board_view.highlight_current_variables([current_variable])
+                highlight_variables = [current_variable]
+            else:
+                # Pass in an empty list to deselect all variables
+                highlight_variables = []
+            self.board_view.highlight_current_variables(highlight_variables)
             current_value = history_step[BacktrackingSearchHistoryItems.CURRENT_VALUE]
             if current_value is not None:
                 self.board_view.highlight_value_in_variable(current_variable, current_value, highlight_type=1)
