@@ -100,7 +100,7 @@ class AC3:
                 AC3HistoryItems.CURRENT_QUEUE: list(queue),
                 # Need to do a deep copy to preserve state of this variable
                 AC3HistoryItems.DOMAINS: copy.deepcopy(self.csp.get_all_domains()),
-                AC3HistoryItems.MESSAGE: "Initialized queue and domains"
+                AC3HistoryItems.MESSAGE: "Initialized queue and domains."
             }
             self.history.append(history_item)
         # Turn the list into a FIFO queue
@@ -113,7 +113,7 @@ class AC3:
                     AC3HistoryItems.CURRENT_ARC: (first_var, second_var),
                     AC3HistoryItems.CURRENT_QUEUE: list(queue),
                     AC3HistoryItems.DOMAINS: copy.deepcopy(self.csp.get_all_domains()),
-                    AC3HistoryItems.MESSAGE: "Popped arc from queue"
+                    AC3HistoryItems.MESSAGE: "Popped arc from queue."
                 }
                 self.history.append(history_item)
             if self.revise(first_var, second_var):
@@ -125,17 +125,19 @@ class AC3:
                 if len(self.csp.get_domain(first_var)) == 0:
                     if self.record_history:
                         history_item[AC3HistoryItems.CURRENT_QUEUE] = list(queue)
-                        history_item[AC3HistoryItems.MESSAGE] = "Domain for variable '{}' is empty".format(str(first_var))
+                        history_item[AC3HistoryItems.MESSAGE] = "Domain for variable '" + str(first_var) + \
+                                                                "' is empty. No consistent assignment found."
                         self.history.append(history_item)
-                        return False
                     return False
                 for neighbor in self.csp.get_neighbors(first_var):
                     if neighbor != second_var:
                         queue.append((neighbor, first_var))
                 if self.record_history:
                     history_item[AC3HistoryItems.CURRENT_QUEUE] = list(queue)
-                    history_item[AC3HistoryItems.MESSAGE] = "Updated domains and queue"
+                    history_item[AC3HistoryItems.MESSAGE] = "Updated domains and queue."
                     self.history.append(history_item)
+        # Update the message of the last step to include the fact that the algorithm has stopped.
+        self.history[-1][AC3HistoryItems.MESSAGE] += " Search has completed."
         return True
 
     def revise(self, first_var, second_var) -> bool:
@@ -225,7 +227,7 @@ class BacktrackingSearch:
                 history_item = self.create_history_item(
                     assignment=assignment,
                     inferences=inferences,
-                    message="Assignment is complete"
+                    message="Assignment is complete."
                 )
                 self.history.append(history_item)
             return assignment
@@ -239,7 +241,7 @@ class BacktrackingSearch:
                     current_variable=variable,
                     current_value=value,
                     ordered_values=ordered_values,
-                    message="Selected variable and value"
+                    message="Selected variable and value."
                 )
                 self.history.append(history_item)
             if self.is_consistent(variable, value, assignment):
@@ -252,7 +254,7 @@ class BacktrackingSearch:
                         current_variable=variable,
                         current_value=value,
                         ordered_values=ordered_values,
-                        message="Updated assignment and inferences"
+                        message="Updated assignment and inferences."
                     )
                     self.history.append(history_item)
                 # Only continue if there are valid inferences. Otherwise, it means there will be a variable with no
@@ -270,19 +272,25 @@ class BacktrackingSearch:
                         current_variable=variable,
                         current_value=value,
                         ordered_values=ordered_values,
-                        message="Value is not consistent with assignment"
+                        message="Value is not consistent with assignment."
                     )
                     self.history.append(history_item)
         # Need to remove variable assignment as the assignment variable is mutable, so it is passed by reference.
         if variable in assignment.keys():
             del assignment[variable]
         if self.record_history:
+            message = "No values in remaining variables satisfy current assignment."
+            if len(assignment) == 0:
+                # If we've backtracked all the way to the beginning, there is no consistent assignment.
+                message += " No consistent assignment found."
+            else:
+                message += " Backtracking..."
             history_item = self.create_history_item(
                 assignment=assignment,
                 inferences=inferences,
                 current_variable=variable,
                 ordered_values=ordered_values,
-                message="No remaining variable's values satisfy current assignment. Backtracking..."
+                message=message
             )
             self.history.append(history_item)
         return None
