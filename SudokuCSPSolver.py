@@ -295,6 +295,20 @@ class SudokuBoardSolverView(SudokuBoardBaseView):
         row, col = SudokuBoard.get_row_col_from_variable_name(variable)
         self.entries[row-1][col-1].select_value(value, highlight_type)
 
+    def reset_board(self, puzzle: list) -> None:
+        """Set all domains to puzzle default and clear all selected cells/values"""
+        default_domain = [i+1 for i in range(self.board_size)]
+        for row in range(self.board_size):
+            for col in range(self.board_size):
+                entry = self.entries[row][col]
+                if puzzle[row * self.board_size + col] != 0:
+                    values = [puzzle[row*self.board_size + col]]
+                else:
+                    values = default_domain
+                entry.update_domain(values)
+        self.highlight_current_variables(variables=[])
+        self.clear_all_highlighted_values()
+
 
 class OptionsPanelView(Frame):
     def __init__(self, board_size: int, change_board_size_fn, master=None, **kw):
@@ -917,7 +931,7 @@ class SudokuCSPSolver:
         # Remove any existing messages
         self.reset_message()
         # self.entry_disabled = False
-        # self.board_view.reset_board(self.puzzle)
+        self.board_view.reset_board(self.puzzle)
         self.change_board_type('input')
         self.buttons['solve_button'].state(['!disabled'])
         self.buttons['reset_button'].state(['disabled', '!focus'])
