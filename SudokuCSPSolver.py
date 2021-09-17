@@ -489,6 +489,7 @@ class InfoPanelView(Frame):
     def make_gui(self) -> (Entry, Label, dict, dict):
         text_box_width = 40
         text_box_height = 10
+        message_text_width = 300
         Label(self, text="Information", font="TkHeadingFont 16").pack()
         # Step #/#
         step_frame = Frame(self)
@@ -523,8 +524,8 @@ class InfoPanelView(Frame):
         # Step message
         message_frame = Frame(ac3_section_frame)
         message_frame.pack(anchor=W)
-        Label(message_frame, text="Action:").pack(side=LEFT)
-        message_text = Label(message_frame)
+        Label(message_frame, text="Action:").pack(side=LEFT, anchor=N)
+        message_text = Label(message_frame, wraplength=message_text_width)
         message_text.pack(side=LEFT)
         # Current arc
         arc_frame = Frame(ac3_section_frame)
@@ -552,8 +553,8 @@ class InfoPanelView(Frame):
         # Step message
         message_frame = Frame(backtracking_section_frame)
         message_frame.pack(anchor=W)
-        Label(message_frame, text="Action:").pack(side=LEFT)
-        message_text = Label(message_frame)
+        Label(message_frame, text="Action:").pack(side=LEFT, anchor=N)
+        message_text = Label(message_frame, wraplength=message_text_width)
         message_text.pack(side=LEFT)
         # Current assignment
         assignment_frame = Frame(backtracking_section_frame)
