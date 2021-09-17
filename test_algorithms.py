@@ -305,6 +305,36 @@ class TestAlgorithms(unittest.TestCase):
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
 
+    def test_backtracking_with_DegreeHeuristic_LCV_on_unsolvable_sudoku_1(self):
+        # Check that a solution is returned when there are multiple possible solution
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_multiple_solutions)
+        csp = board.generate_csp()
+        backtracking_runner = BacktrackingSearch(
+            csp,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
+            order_domain_values_heuristic=OrderDomainValuesHeuristics.LCV,
+            inference_function=InferenceFunctions.ForwardChecking
+        )
+        result = backtracking_runner.run()
+        self.assertIsNotNone(result)
+        # We don't specify the solution as it depends on implementation specifics. We pass in the values to the
+        # SudokuBoard class, which internally checks the validity of the puzzle.
+        result_as_list = [result[var_name] for var_name in sorted(result)]
+        filled_board = SudokuBoard(initial_values=result_as_list)
+        self.assertTrue(type(filled_board) is SudokuBoard)
+
+    def test_backtracking_with_DegreeHeuristic_LCV_on_unsolvable_sudoku_2(self):
+        board = SudokuBoard(initial_values=self.sudoku_puzzle_no_solution)
+        csp = board.generate_csp()
+        backtracking_runner = BacktrackingSearch(
+            csp,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
+            order_domain_values_heuristic=OrderDomainValuesHeuristics.LCV,
+            inference_function=InferenceFunctions.ForwardChecking
+        )
+        result = backtracking_runner.run()
+        self.assertIsNone(result)
+
     def test_ac3_history_on_solvable_4x4_sudoku(self):
         sudoku_size = 4
         solution_dict = self.make_solution_dict(

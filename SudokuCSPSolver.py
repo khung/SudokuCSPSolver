@@ -871,26 +871,27 @@ class SudokuCSPSolver:
         else:
             raise ValueError("Invalid value for algorithm")
         result = algorithm_runner.run()
-        multiple_solutions = False
-        if self.selected_algorithm is AlgorithmTypes.AC3:
-            # Only AC3 can return multiple solutions
+        # Both AC3 and backtracking search can return no consistent assignment
+        if result is None:
+            self.set_message(text="The search algorithm could not find a consistent assignment.", error=True)
+        elif self.selected_algorithm is AlgorithmTypes.AC3:
+            # AC3 can return a partial assignment
+            partial_assignment = False
             for variable_name in result.keys():
                 if len(result[variable_name]) > 1:
-                    multiple_solutions = True
+                    partial_assignment = True
                     break
-        if multiple_solutions:
-            self.set_message(text="There are multiple solutions to this puzzle.", error=True)
-            # If there are multiple solutions, keep original puzzle
-        else:
-            # Set values in GUI
-            # result_string = self.result_dict_to_string(result)
-            # self.board_view.set_board(values=result_string, entry_disabled=self.entry_disabled)
-            # Store history in instance so it will be accessible to other methods
-            self.history = algorithm_runner.history
-            num_steps = len(self.history)
-            self.main_panel['info_panel'].set_total_steps(num_steps)
-            # Set first step in history
-            self.main_panel['info_panel'].go_to_first_step()
+            if partial_assignment:
+                self.set_message(text="AC3 algorithm returned a partial assignment.", error=True)
+        # Set values in GUI
+        # result_string = self.result_dict_to_string(result)
+        # self.board_view.set_board(values=result_string, entry_disabled=self.entry_disabled)
+        # Store history in instance so it will be accessible to other methods
+        self.history = algorithm_runner.history
+        num_steps = len(self.history)
+        self.main_panel['info_panel'].set_total_steps(num_steps)
+        # Set first step in history
+        self.main_panel['info_panel'].go_to_first_step()
         # Allow resetting of puzzle
         self.buttons['reset_button'].state(['!disabled'])
 
