@@ -371,7 +371,11 @@ class BacktrackingSearch:
             # Least-constraining-value heuristic
             # Prefer value that rules out the fewest choices for neighbors
             ordered_values_temp = []
-            for value in self.csp.get_domain(variable):
+            if inferences:
+                values_to_check = inferences[variable]
+            else:
+                values_to_check = self.csp.get_domain(variable)
+            for value in values_to_check:
                 domains = self.inference(variable, value, InferenceFunctions.ForwardChecking, inferences)
                 total_num_values = 0
                 for neighbor in self.csp.get_neighbors(variable):
