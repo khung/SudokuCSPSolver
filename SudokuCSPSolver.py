@@ -262,6 +262,15 @@ class SudokuBoardInputView(SudokuBoardBaseView):
         """Clear board UI elements."""
         self.set_board(values='0'*self.board_size*self.board_size, entry_disabled=False)
 
+    def get_board(self) -> list:
+        puzzle_as_list = []
+        for row in range(self.board_size):
+            for col in range(self.board_size):
+                value = self.entries[row][col].get()
+                digit = int(value) if value != '' else 0
+                puzzle_as_list.append(digit)
+        return puzzle_as_list
+
 
 class SudokuBoardSolverView(SudokuBoardBaseView):
     def __init__(self, board_size: int, master=None, **kw):
@@ -823,12 +832,7 @@ class SudokuCSPSolver:
         if not self.validate_options():
             return
         # Read cells and create Sudoku board
-        puzzle_as_list = []
-        for row in range(self.board_size):
-            for col in range(self.board_size):
-                value = self.board_view.entries[row][col].get()
-                digit = int(value) if value != '' else 0
-                puzzle_as_list.append(digit)
+        puzzle_as_list = self.board_view.get_board()
         # Save off board. We don't use SudokuBoard.to_list() as it depends on a valid puzzle.
         self.puzzle = puzzle_as_list
         # Create the Sudoku
@@ -838,14 +842,7 @@ class SudokuCSPSolver:
         except ValueError:
             self.set_message(text="There are duplicate values in a row, column, or region.", error=True)
             return
-        # Disable GUI elements
-        self.entry_disabled = True
-        # for row in self.board_view.entries:
-        #     for entry in row:
-        #         entry.configure(state=DISABLED)
-        # Need to remove keyboard focus when disabling button being pressed
-        self.buttons['solve_button'].state(['disabled', '!focus'])
-        self.buttons['clear_button'].state(['disabled'])
+        self.set_controls('solver')
         # Change to solver view
         self.change_board_type('solver')
         # self.board_view.set_initial_board(puzzle_as_list)
@@ -907,8 +904,6 @@ class SudokuCSPSolver:
         self.main_panel['info_panel'].set_total_steps(num_steps)
         # Set first step in history
         self.main_panel['info_panel'].go_to_first_step()
-        # Allow resetting of puzzle
-        self.buttons['reset_button'].state(['!disabled'])
 
     @staticmethod
     def puzzle_list_to_string(puzzle: list):
@@ -931,12 +926,9 @@ class SudokuCSPSolver:
         """Reset Sudoku board from solved state to original state."""
         # Remove any existing messages
         self.reset_message()
-        # self.entry_disabled = False
         self.board_view.reset_board(self.puzzle)
+        self.set_controls('input')
         self.change_board_type('input')
-        self.buttons['solve_button'].state(['!disabled'])
-        self.buttons['reset_button'].state(['disabled', '!focus'])
-        self.buttons['clear_button'].state(['!disabled'])
         self.main_panel['info_panel'].reset_panel()
         self.change_panel(OptionsPanelView)
 
@@ -962,6 +954,24 @@ class SudokuCSPSolver:
         self.board_size = size
         self.board_view = self.board_views[str(self.board_size)+'_input']
         self.board_view.grid()
+
+    def set_controls(self, board_type: str):
+        if board_type != 'input' and board_type != 'solver':
+            raise ValueError("Invalid board_type value")
+        if board_type == 'solver':
+            self.entry_disabled = True
+            # for row in self.board_view.entries:
+            #     for entry in row:
+            #         entry.configure(state=DISABLED)
+            # Need to remove keyboard focus when disabling button being pressed
+            self.buttons['solve_button'].state(['disabled', '!focus'])
+            self.buttons['reset_button'].state(['!disabled'])
+            self.buttons['clear_button'].state(['disabled'])
+        else:
+            self.entry_disabled = False
+            self.buttons['solve_button'].state(['!disabled'])
+            self.buttons['reset_button'].state(['disabled', '!focus'])
+            self.buttons['clear_button'].state(['!disabled'])
 
     def change_board_type(self, board_type: str):
         if board_type != 'input' and board_type != 'solver':
