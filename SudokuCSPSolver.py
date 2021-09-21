@@ -518,7 +518,9 @@ class InfoPanelView(Frame):
         text_box_width = 40
         text_box_height = 10
         message_text_width = 300
-        Label(self, text="Information", font="TkHeadingFont 16").pack()
+        Label(self, text="Information", font="TkHeadingFont 16").pack(anchor=W)
+        # Spacer
+        Label(self).pack()
         # Step #/#
         step_frame = Frame(self)
         step_frame.pack()
