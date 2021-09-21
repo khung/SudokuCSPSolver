@@ -186,9 +186,9 @@ class SudokuBoardBaseView(Frame):
         entries = []
         # These need to be instance variables so that mainloop will be able to reference the images when rendering
         images = {
-            'c_separator_img': PhotoImage(file="c_separator.png"),
-            'h_separator_img': PhotoImage(file="h_separator.png"),
-            'v_separator_img': PhotoImage(file="v_separator.png")
+            'c_separator_img': PhotoImage(file="assets/c_separator.png"),
+            'h_separator_img': PhotoImage(file="assets/h_separator.png"),
+            'v_separator_img': PhotoImage(file="assets/v_separator.png")
         }
 
         if self.board_size == 9:
@@ -495,12 +495,19 @@ class InfoPanelView(Frame):
         self.go_to_step_fn = go_to_step_fn
         # Don't automatically associate the value with the widget but set it manually, as users may enter invalid info.
         self.current_step = 1
-        self.current_step_entry, self.total_steps, self.step_controls, self.sections = self.make_gui()
+        self.current_step_entry, self.total_steps, self.step_controls, self.sections, self.images = self.make_gui()
         # Keep track of which section should be visible (none by default)
         self.visible_section = InfoPanelSectionTypes.none
         self.change_section(InfoPanelSectionTypes.none)
 
-    def make_gui(self) -> (Entry, Label, dict, dict):
+    def make_gui(self) -> (Entry, Label, dict, dict, dict):
+        # These need to be instance variables so that mainloop will be able to reference the images when rendering
+        images = {
+            'first_step_img': PhotoImage(file="assets/step_first.png"),
+            'previous_step_img': PhotoImage(file="assets/step_previous.png"),
+            'next_step_img': PhotoImage(file="assets/step_next.png"),
+            'last_step_img': PhotoImage(file="assets/step_last.png")
+        }
         text_box_width = 40
         text_box_height = 10
         message_text_width = 300
@@ -520,10 +527,18 @@ class InfoPanelView(Frame):
         step_control_frame.pack(anchor=W)
         # Dictionary of step controls
         step_controls = {
-            StepControlButtons.FIRST: Button(step_control_frame, text="First", command=self.go_to_first_step),
-            StepControlButtons.PREVIOUS: Button(step_control_frame, text="Previous", command=self.go_to_previous_step),
-            StepControlButtons.NEXT: Button(step_control_frame, text="Next", command=self.go_to_next_step),
-            StepControlButtons.LAST: Button(step_control_frame, text="Last", command=self.go_to_last_step)
+            StepControlButtons.FIRST: Button(
+                step_control_frame, text="First", image=images['first_step_img'], command=self.go_to_first_step
+            ),
+            StepControlButtons.PREVIOUS: Button(
+                step_control_frame, text="Previous", image=images['previous_step_img'], command=self.go_to_previous_step
+            ),
+            StepControlButtons.NEXT: Button(
+                step_control_frame, text="Next", image=images['next_step_img'], command=self.go_to_next_step
+            ),
+            StepControlButtons.LAST: Button(
+                step_control_frame, text="Last", image=images['last_step_img'], command=self.go_to_last_step
+            )
         }
         step_controls[StepControlButtons.FIRST].pack(side=LEFT)
         step_controls[StepControlButtons.PREVIOUS].pack(side=LEFT)
@@ -604,7 +619,7 @@ class InfoPanelView(Frame):
         sections[InfoPanelSectionsBacktracking.ORDERED_VALUES] = ordered_values_text
         sections[InfoPanelSectionsBacktracking.CURRENT_VALUE] = value_text
 
-        return current_step_entry, total_steps, step_controls, sections
+        return current_step_entry, total_steps, step_controls, sections, images
 
     def set_current_step(self, step: int) -> None:
         self.current_step = step
