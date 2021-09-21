@@ -171,6 +171,11 @@ class SolverCell(Frame):
         self.domain[value-1].configure(style=new_style)
 
 
+class AppMode(Enum):
+    INPUT = auto()
+    SOLVE = auto()
+
+
 class SudokuBoardBaseView(Frame):
     def __init__(self, board_size: int, master=None, **kw):
         super().__init__(master, **kw)
@@ -733,7 +738,7 @@ class SudokuCSPSolver:
             else:
                 raise ValueError("The initial puzzle string has an invalid length.")
         self.root, self.board_views, self.main_panel, self.message, self.buttons = self.make_gui()
-        initial_board = str(self.board_size)+'_input'
+        initial_board = str(self.board_size)+'_'+AppMode.INPUT.name
         self.board_view = self.board_views[initial_board]
         # Hide the board(s) that are not active
         for view in self.board_views:
@@ -784,10 +789,10 @@ class SudokuCSPSolver:
         board_views = {}
         for size_index in range(len(SudokuBoard.board_sizes)):
             size = SudokuBoard.board_sizes[size_index]
-            board_views[str(size)+'_input'] = SudokuBoardInputView(size, board_inner_frame)
-            board_views[str(size)+'_input'].grid(row=0, column=size_index)
-            board_views[str(size)+'_solver'] = SudokuBoardSolverView(size, board_inner_frame)
-            board_views[str(size)+'_solver'].grid(row=0, column=size_index)
+            board_views[str(size)+'_'+AppMode.INPUT.name] = SudokuBoardInputView(size, board_inner_frame)
+            board_views[str(size)+'_'+AppMode.INPUT.name].grid(row=0, column=size_index)
+            board_views[str(size)+'_'+AppMode.SOLVE.name] = SudokuBoardSolverView(size, board_inner_frame)
+            board_views[str(size)+'_'+AppMode.SOLVE.name].grid(row=0, column=size_index)
         # Main panel
         # Similar trick as with the board frame, but no inner frame as the content does not need to be centered.
         panel_frame = Frame(upper_part, width=panel_frame_width)
@@ -842,9 +847,9 @@ class SudokuCSPSolver:
         except ValueError:
             self.set_message(text="There are duplicate values in a row, column, or region.", error=True)
             return
-        self.set_controls('solver')
+        self.set_controls(AppMode.SOLVE)
         # Change to solver view
-        self.change_board_type('solver')
+        self.change_board_type(AppMode.SOLVE)
         # self.board_view.set_initial_board(puzzle_as_list)
         # Change to information panel
         self.change_panel(InfoPanelView)
@@ -927,8 +932,8 @@ class SudokuCSPSolver:
         # Remove any existing messages
         self.reset_message()
         self.board_view.reset_board(self.puzzle)
-        self.set_controls('input')
-        self.change_board_type('input')
+        self.set_controls(AppMode.INPUT)
+        self.change_board_type(AppMode.INPUT)
         self.main_panel['info_panel'].reset_panel()
         self.change_panel(OptionsPanelView)
 
@@ -952,13 +957,11 @@ class SudokuCSPSolver:
         self.board_view.grid_remove()
         # Show new board
         self.board_size = size
-        self.board_view = self.board_views[str(self.board_size)+'_input']
+        self.board_view = self.board_views[str(self.board_size)+'_'+AppMode.INPUT.name]
         self.board_view.grid()
 
-    def set_controls(self, board_type: str):
-        if board_type != 'input' and board_type != 'solver':
-            raise ValueError("Invalid board_type value")
-        if board_type == 'solver':
+    def set_controls(self, mode: AppMode):
+        if mode == AppMode.SOLVE:
             self.entry_disabled = True
             # for row in self.board_view.entries:
             #     for entry in row:
@@ -973,13 +976,11 @@ class SudokuCSPSolver:
             self.buttons['reset_button'].state(['disabled', '!focus'])
             self.buttons['clear_button'].state(['!disabled'])
 
-    def change_board_type(self, board_type: str):
-        if board_type != 'input' and board_type != 'solver':
-            raise ValueError("Invalid board_type value")
+    def change_board_type(self, mode: AppMode):
         # Hide current board
         self.board_view.grid_remove()
         # Show new board
-        self.board_view = self.board_views["{}_{}".format(str(self.board_size), board_type)]
+        self.board_view = self.board_views["{}_{}".format(str(self.board_size), mode.name)]
         self.board_view.grid()
 
     def change_panel(self, panel_type: type):
