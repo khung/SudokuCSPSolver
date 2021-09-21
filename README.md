@@ -63,7 +63,8 @@ Click on **Solve** to run the selected algorithm. After it returns, you
 can step through each high-level part of the algorithm.
 
 The step indicator shows the current step and the total number of steps. The
-buttons below allow the user to move between the steps. The current action
+buttons below allow the user to move between the steps. To go to a specific
+step, enter a value in the current step and press Enter. The current action
 being performed is listed as well.
 
 To go back to the puzzle entry screen, click on **Reset solver**.

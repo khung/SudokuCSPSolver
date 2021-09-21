@@ -520,6 +520,14 @@ class InfoPanelView(Frame):
         Label(step_info_frame, text="Step: ").pack(side=LEFT)
         current_step_entry = Entry(step_info_frame, width=4, justify=RIGHT)
         current_step_entry.pack(side=LEFT)
+
+        # We create a function variable instead of just using a lambda, as .bind() passes in the event as the argument
+        def onEnter():
+            self.go_to_step_fn(self.current_step_entry.get())
+        current_step_entry.bind(
+            '<Return>',
+            (lambda event: onEnter())
+        )
         Label(step_info_frame, text="/").pack(side=LEFT)
         total_steps = Label(step_info_frame)
         total_steps.pack(side=LEFT)
@@ -630,16 +638,16 @@ class InfoPanelView(Frame):
         self.total_steps.configure(text=str(num_steps))
 
     def go_to_first_step(self) -> None:
-        self.go_to_step_fn(1)
+        self.go_to_step_fn('1')
 
     def go_to_previous_step(self) -> None:
-        self.go_to_step_fn(self.current_step - 1)
+        self.go_to_step_fn(str(self.current_step - 1))
 
     def go_to_next_step(self) -> None:
-        self.go_to_step_fn(self.current_step + 1)
+        self.go_to_step_fn(str(self.current_step + 1))
 
     def go_to_last_step(self) -> None:
-        self.go_to_step_fn(int(self.total_steps.cget('text')))
+        self.go_to_step_fn(self.total_steps.cget('text'))
 
     def set_step_controls(self):
         # Make sure that controls are set correctly
@@ -1005,9 +1013,18 @@ class SudokuCSPSolver:
             else:
                 self.main_panel[panel].grid()
 
-    def go_to_step(self, step: int) -> None:
-        assert step > 0
-        assert step <= len(self.history)
+    def go_to_step(self, step_string: str) -> None:
+        # Clear message first
+        self.reset_message()
+        # Validate input
+        try:
+            step = int(step_string)
+        except ValueError:
+            self.set_message("Step is not valid.", error=True)
+            return
+        if step <= 0 or step > len(self.history):
+            self.set_message("Step is not valid.", error=True)
+            return
         history_step = self.history[step-1]
         # Set info panel
         self.main_panel['info_panel'].set_current_step(step)
