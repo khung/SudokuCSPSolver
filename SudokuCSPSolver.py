@@ -3,6 +3,7 @@ from tkinter.scrolledtext import *
 from tkinter.ttk import *
 # Re-import tkinter's Label so we can use it even when it's overridden by ttk's import
 from tkinter import Label as TkLabel
+from idlelib.tooltip import Hovertip
 from sudoku_board import SudokuBoard
 from algorithms import AC3, BacktrackingSearch, AC3HistoryItems, AlgorithmTypes, SelectUnassignedVariableHeuristics, \
     OrderDomainValuesHeuristics, InferenceFunctions, BacktrackingSearchHistoryItems
@@ -385,12 +386,17 @@ class OptionsPanelView(Frame):
         }
         algorithm_options = {}
         algorithm_options_list = [
-            ('MRV', "Minimum-remaining-values heuristic"),
-            ('Degree', "Degree heuristic"),
-            ('LCV', "Least-constraining-value heuristic"),
-            ('ForwardChecking', "Forward checking")
+            ('MRV', "Minimum-remaining-values heuristic",
+             "Chooses the variable that has the least number of remaining values in its domain."),
+            ('Degree', "Degree heuristic",
+             "Chooses the variable that has the most constraints with the remaining unassigned variables."),
+            ('LCV', "Least-constraining-value heuristic",
+             "Orders values (in ascending order) by the number of values removed in the variable's neighbors if that "
+             + "value is chosen."),
+            ('ForwardChecking', "Forward checking",
+             "Enforces arc consistency when a variable is assigned.")
         ]
-        for key, description in algorithm_options_list:
+        for key, description, tooltip_text in algorithm_options_list:
             algorithm_options[key] = IntVar()
             options[key] = Checkbutton(
                 algorithm_options_frame,
@@ -398,6 +404,7 @@ class OptionsPanelView(Frame):
                 command=(lambda button=key: self.update_algorithm_checkbuttons(button)),
                 variable=algorithm_options[key]
             )
+            Hovertip(options[key], tooltip_text)
         # Set initial value
         board_size.set(size)
         options['9x9'].pack(anchor=W)
@@ -520,6 +527,7 @@ class InfoPanelView(Frame):
         Label(step_info_frame, text="Step: ").pack(side=LEFT)
         current_step_entry = Entry(step_info_frame, width=4, justify=RIGHT)
         current_step_entry.pack(side=LEFT)
+        Hovertip(current_step_entry, "Current step")
 
         # We create a function variable instead of just using a lambda, as .bind() passes in the event as the argument
         def onEnter():
@@ -531,6 +539,7 @@ class InfoPanelView(Frame):
         Label(step_info_frame, text="/").pack(side=LEFT)
         total_steps = Label(step_info_frame)
         total_steps.pack(side=LEFT)
+        Hovertip(total_steps, "Total steps")
         step_control_frame = Frame(self)
         step_control_frame.pack(anchor=W)
         # Dictionary of step controls
@@ -552,6 +561,10 @@ class InfoPanelView(Frame):
         step_controls[StepControlButtons.PREVIOUS].pack(side=LEFT)
         step_controls[StepControlButtons.NEXT].pack(side=LEFT)
         step_controls[StepControlButtons.LAST].pack(side=LEFT)
+        Hovertip(step_controls[StepControlButtons.FIRST], "First step")
+        Hovertip(step_controls[StepControlButtons.PREVIOUS], "Previous step")
+        Hovertip(step_controls[StepControlButtons.NEXT], "Next step")
+        Hovertip(step_controls[StepControlButtons.LAST], "Last step")
         # Create a dictionary of updatable sections
         sections = {}
 

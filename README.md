@@ -48,8 +48,9 @@ the least number of remaining values in its domain. The degree heuristic is a
 tie-breaker for the MRV heuristic and will choose the variable that has the
 most constraints with the remaining unassigned variables.
 
-The least-constraining-value (LCV) heuristic will choose the value that
-removes the fewest values in the variable's neighbors based on the constraints.
+The least-constraining-value (LCV) heuristic will order values (in ascending
+order) by the number of values removed in the variable's neighbors if that
+value is chosen.
 
 Forward checking enforces arc consistency when a variable is assigned, removing
 inconsistent values from the domains of the variable's neighbors based on the
