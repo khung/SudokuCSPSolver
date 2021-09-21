@@ -357,7 +357,7 @@ class OptionsPanelView(Frame):
                 value=4),
             'AC3': Radiobutton(
                 algorithm_frame,
-                text="Constraint Propagation (AC3)",
+                text="Constraint Propagation (AC-3)",
                 variable=algorithm,
                 command=(lambda: self.update_algorithm_checkbuttons('AC3')),
                 # Value needs to be an int type, not an IntEnum. Otherwise, .get() will not work.
