@@ -567,6 +567,9 @@ class InfoPanelView(Frame):
         Hovertip(step_controls[StepControlButtons.PREVIOUS], "Previous step")
         Hovertip(step_controls[StepControlButtons.NEXT], "Next step")
         Hovertip(step_controls[StepControlButtons.LAST], "Last step")
+
+        # Spacer
+        Label(self).pack()
         # Create a dictionary of updatable sections
         sections = {}
 
