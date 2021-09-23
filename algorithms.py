@@ -1,7 +1,9 @@
+import collections
 import math
 from collections import deque
 from enum import Enum, IntEnum, auto
 import copy
+from typing import Optional, Any
 
 
 class AlgorithmTypes(IntEnum):
@@ -11,7 +13,7 @@ class AlgorithmTypes(IntEnum):
 
 # Define what a constraint satisfaction problem should consist of
 class ConstraintSatisfactionProblem:
-    def __init__(self, variables: list, domains: list, constraints: list):
+    def __init__(self, variables: list, domains: list, constraints: list) -> None:
         if len(variables) != len(domains):
             raise ValueError("Number of domains must match number of variables")
         self.variables = variables
@@ -43,19 +45,19 @@ class ConstraintSatisfactionProblem:
         for key in self._constraints.keys():
             self._neighbors[key] = self._constraints[key].keys()
 
-    def get_neighbors(self, variable):
+    def get_neighbors(self, variable) -> collections.KeysView:
         return self._neighbors[variable]
 
-    def get_domain(self, variable):
+    def get_domain(self, variable) -> list:
         return self._domains[variable]
 
-    def get_all_domains(self):
+    def get_all_domains(self) -> dict:
         return self._domains
 
-    def get_constraints(self, first_var, second_var):
+    def get_constraints(self, first_var, second_var) -> list:
         return self._constraints[first_var][second_var]
 
-    def delete_from_domain(self, variable, value):
+    def delete_from_domain(self, variable, value) -> None:
         self._domains[variable].remove(value)
 
 
@@ -67,14 +69,14 @@ class AC3HistoryItems(Enum):
 
 
 class AC3:
-    def __init__(self, csp: ConstraintSatisfactionProblem, record_history=False):
+    def __init__(self, csp: ConstraintSatisfactionProblem, record_history: bool = False) -> None:
         self.csp = csp
         self.solution = None
         self.is_consistent = False
         self.record_history = record_history
         self.history = []
 
-    def run(self):
+    def run(self) -> Optional[dict]:
         self.is_consistent = self._run_algorithm()
         if self.is_consistent:
             self.solution = {}
@@ -183,11 +185,12 @@ class BacktrackingSearch:
     def __init__(
             self,
             csp: ConstraintSatisfactionProblem,
-            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.none,
-            order_domain_values_heuristic=OrderDomainValuesHeuristics.none,
-            inference_function=InferenceFunctions.none,
-            record_history=False
-    ):
+            select_unassigned_variable_heuristic: SelectUnassignedVariableHeuristics
+            = SelectUnassignedVariableHeuristics.none,
+            order_domain_values_heuristic: OrderDomainValuesHeuristics = OrderDomainValuesHeuristics.none,
+            inference_function: InferenceFunctions = InferenceFunctions.none,
+            record_history: bool = False
+    ) -> None:
         self.csp = csp
         self.select_unassigned_variable_heuristic = None
         self.order_domain_values_heuristic = None
@@ -211,15 +214,15 @@ class BacktrackingSearch:
         self.record_history = record_history
         self.history = []
 
-    def run(self):
+    def run(self) -> Optional[dict]:
         self.solution = self._run_algorithm()
         return self.solution
 
     # Based on Backtracking-Search pseudo-code from AIMA 3rd ed. Chapter 6
-    def _run_algorithm(self):
+    def _run_algorithm(self) -> Optional[dict]:
         return self._backtrack({}, None)
 
-    def _backtrack(self, assignment: dict, inferences):
+    def _backtrack(self, assignment: dict, inferences: Optional[dict]) -> Optional[dict]:
         if self._complete_assignment(assignment):
             if self.record_history:
                 history_item = self._create_history_item(
@@ -230,7 +233,7 @@ class BacktrackingSearch:
                 self.history.append(history_item)
             return assignment
         variable = self._select_unassigned_variable(assignment, inferences)
-        ordered_values = self._order_domain_values(variable, assignment, inferences)
+        ordered_values = self._order_domain_values(variable, inferences)
         for value in ordered_values:
             if self.record_history:
                 history_item = self._create_history_item(
@@ -295,12 +298,12 @@ class BacktrackingSearch:
 
     @staticmethod
     def _create_history_item(
-            current_variable: str = None,
-            ordered_values: list = None,
-            current_value = None,
-            inferences = None,
-            assignment: dict = None,
-            message: str = None
+            current_variable: Optional[str] = None,
+            ordered_values: Optional[list] = None,
+            current_value=None,
+            inferences: Optional[dict] = None,
+            assignment: Optional[dict] = None,
+            message: Optional[str] = None
     ) -> dict:
         history_item = {
             BacktrackingSearchHistoryItems.CURRENT_VARIABLE: current_variable,
@@ -321,7 +324,7 @@ class BacktrackingSearch:
                 return False
         return True
 
-    def _select_unassigned_variable(self, assignment: dict, inferences):
+    def _select_unassigned_variable(self, assignment: dict, inferences: Optional[dict]) -> Any:
         if self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.MRV or\
                 self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DEGREE_HEURISTIC:
             # Minimum-remaining-values heuristic
@@ -357,14 +360,14 @@ class BacktrackingSearch:
                 if variable not in assignment.keys():
                     return variable
 
-    def _get_num_constraints_with_unassigned_neighbors(self, assignment: dict, variable):
+    def _get_num_constraints_with_unassigned_neighbors(self, assignment: dict, variable) -> int:
         maximum_num_constraints = 0
         for neighbor in self.csp.get_neighbors(variable):
             if neighbor not in assignment.keys():
                 maximum_num_constraints += len(self.csp.get_constraints(variable, neighbor))
         return maximum_num_constraints
 
-    def _order_domain_values(self, variable, assignment: dict, inferences):
+    def _order_domain_values(self, variable, inferences: Optional[dict]) -> list:
         if self.order_domain_values_heuristic == OrderDomainValuesHeuristics.LCV:
             # Least-constraining-value heuristic
             # Prefer value that rules out the fewest choices for neighbors
@@ -390,7 +393,7 @@ class BacktrackingSearch:
             else:
                 return self.csp.get_domain(variable)
 
-    def _is_consistent(self, variable, value, assignment):
+    def _is_consistent(self, variable, value, assignment: dict) -> bool:
         # Check if the value violates any of the constraints with already-assigned neighbors
         for neighbor in self.csp.get_neighbors(variable):
             if neighbor in assignment.keys():
@@ -400,7 +403,13 @@ class BacktrackingSearch:
         return True
 
     # Allow passing in the inference function instead of checking class variable so that this can be re-used
-    def _inference(self, variable, value, inference_function=None, inferences=None):
+    def _inference(
+            self,
+            variable,
+            value,
+            inference_function: InferenceFunctions = InferenceFunctions.none,
+            inferences: Optional[dict] = None
+    ) -> dict:
         if inference_function == InferenceFunctions.FORWARD_CHECKING:
             # Create a new copy where any values in neighbors' domains that violate constraints are removed.
             if inferences:

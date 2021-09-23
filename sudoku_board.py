@@ -1,10 +1,11 @@
 from algorithms import ConstraintSatisfactionProblem
+from typing import Optional
 
 
 class SudokuBoard:
     board_sizes = [4, 9]
 
-    def __init__(self, initial_values: list = None, size: int = 9):
+    def __init__(self, initial_values: Optional[list] = None, size: int = 9) -> None:
         if size not in SudokuBoard.board_sizes:
             raise ValueError("Invalid value for size")
         self.size = size
@@ -18,7 +19,7 @@ class SudokuBoard:
             if not self._is_valid():
                 raise ValueError("initial_values contains an invalid Sudoku puzzle")
 
-    def set_cells(self, values: list):
+    def set_cells(self, values: list) -> None:
         if len(values) != self.size*self.size:
             raise ValueError("initial_values must contain {} items".format(self.size*self.size))
         old_board = self.board.copy()
@@ -29,7 +30,7 @@ class SudokuBoard:
             self.board = old_board
             raise ValueError("initial_values contains an invalid Sudoku puzzle")
 
-    def _is_valid(self, cell: tuple = None) -> bool:
+    def _is_valid(self, cell: Optional[tuple] = None) -> bool:
         # Check that all cell values are valid per Sudoku rules
         # Lookup what group an index is in to see its corresponding region
         if self.size == 9:
@@ -80,7 +81,7 @@ class SudokuBoard:
             result.extend(self.board[i])
         return result
 
-    def get_cell_value(self, row, column):
+    def get_cell_value(self, row: int, column: int) -> int:
         value = self.board[row][column]
         # Don't return 0 (empty cell)
         if value == 0:

@@ -8,10 +8,11 @@ from sudoku_board import SudokuBoard
 from algorithms import AC3, BacktrackingSearch, AC3HistoryItems, AlgorithmTypes, SelectUnassignedVariableHeuristics, \
     OrderDomainValuesHeuristics, InferenceFunctions, BacktrackingSearchHistoryItems
 from enum import Enum, auto
+from typing import Union, Callable
 
 
 class Cell(Entry):
-    def __init__(self, max_digit: int, master=None):
+    def __init__(self, max_digit: int, master=None) -> None:
         super().__init__(
             master,
             width=1,
@@ -24,7 +25,7 @@ class Cell(Entry):
         self.configure(validate="key", validatecommand=command)
         self._max_digit = max_digit
 
-    def _on_validate(self, new_value):
+    def _on_validate(self, new_value: str) -> bool:
         """Validate that the input is a digit between 1 and the board size (4 or 9)."""
         if new_value == "":
             return True
@@ -50,7 +51,7 @@ class SolverCell(Frame):
     selected_cell_highlighted_value_1_label = 'SelectedCell_HighlightValue1.TLabel'
     selected_cell_highlighted_value_2_label = 'SelectedCell_HighlightValue2.TLabel'
 
-    def __init__(self, max_digit: int, master=None, **kw):
+    def __init__(self, max_digit: int, master=None, **kw) -> None:
         super().__init__(master, **kw)
         # Backgrounds need to be set for both frame and label for full coverage.
         s = Style()
@@ -71,7 +72,7 @@ class SolverCell(Frame):
         # Set to unselected by default
         self.unselect_cell()
 
-    def _make_gui(self):
+    def _make_gui(self) -> list:
         domain = []
         digit = 1
         # Positioning is not ideal (horizontal spacing is a bit too narrow), but this seems to be the best Tk can do.
@@ -107,7 +108,7 @@ class SolverCell(Frame):
             inner_frame.rowconfigure(i, weight=1)
         return domain
 
-    def update_domain(self, new_domain: list):
+    def update_domain(self, new_domain: list) -> None:
         for digit_index in range(self.max_digit):
             digit = digit_index+1
             if digit in new_domain:
@@ -117,7 +118,7 @@ class SolverCell(Frame):
                 # Make sure that the digit is not shown if it's not in the new domain
                 self._domain[digit_index].configure(text=" ")
 
-    def select_cell(self):
+    def select_cell(self) -> None:
         self.selected = True
         self.configure(style=self.selected_cell_frame)
         for value_label in self._domain:
@@ -133,7 +134,7 @@ class SolverCell(Frame):
                 new_style = old_style
             value_label.configure(style=new_style)
 
-    def unselect_cell(self):
+    def unselect_cell(self) -> None:
         self.selected = False
         self.configure(style=self.unselected_cell_frame)
         for value_label in self._domain:
@@ -149,7 +150,7 @@ class SolverCell(Frame):
                 new_style = old_style
             value_label.configure(style=new_style)
 
-    def select_value(self, value, highlight_type: int):
+    def select_value(self, value: int, highlight_type: int) -> None:
         if highlight_type != 1 and highlight_type != 2:
             raise ValueError("Invalid highlight_type value")
         if self.selected:
@@ -164,7 +165,7 @@ class SolverCell(Frame):
                 new_style = self.unselected_cell_highlighted_value_2_label
         self._domain[value - 1].configure(style=new_style)
 
-    def unselect_value(self, value):
+    def unselect_value(self, value: int) -> None:
         if self.selected:
             new_style = self.selected_cell_label
         else:
@@ -178,11 +179,11 @@ class AppMode(Enum):
 
 
 class SudokuBoardBaseView(Frame):
-    def __init__(self, board_size: int, master=None, **kw):
+    def __init__(self, board_size: int, master=None, **kw) -> None:
         super().__init__(master, **kw)
         self.board_size = board_size
 
-    def _make_gui(self, is_solver) -> tuple:
+    def _make_gui(self, is_solver: bool) -> (list, dict):
         """Create the tk GUI elements using grid geometry manager and images of separators."""
         entries = []
         # These need to be instance variables so that mainloop will be able to reference the images when rendering
@@ -238,11 +239,11 @@ class SudokuBoardBaseView(Frame):
 
 
 class SudokuBoardInputView(SudokuBoardBaseView):
-    def __init__(self, board_size: int, master=None, **kw):
+    def __init__(self, board_size: int, master=None, **kw) -> None:
         super().__init__(board_size, master, **kw)
         self._entries, self._images = self._make_gui(is_solver=False)
 
-    def set_board(self, values, entry_disabled: bool) -> None:
+    def set_board(self, values: Union[str, list], entry_disabled: bool) -> None:
         """Tk commands to set the board."""
         for row in range(self.board_size):
             for col in range(self.board_size):
@@ -260,7 +261,7 @@ class SudokuBoardInputView(SudokuBoardBaseView):
                 if entry_disabled:
                     entry.configure(state=DISABLED)
 
-    def reset_board(self, puzzle) -> None:
+    def reset_board(self, puzzle: Union[str, list]) -> None:
         """Reset the board UI elements."""
         self.set_board(values=puzzle, entry_disabled=False)
 
@@ -279,7 +280,7 @@ class SudokuBoardInputView(SudokuBoardBaseView):
 
 
 class SudokuBoardSolverView(SudokuBoardBaseView):
-    def __init__(self, board_size: int, master=None, **kw):
+    def __init__(self, board_size: int, master=None, **kw) -> None:
         super().__init__(board_size, master, **kw)
         self._entries, self._images = self._make_gui(is_solver=True)
 
@@ -306,7 +307,7 @@ class SudokuBoardSolverView(SudokuBoardBaseView):
                 for default_value in range(self.board_size):
                     self._entries[row][col].unselect_value(default_value)
 
-    def highlight_value_in_variable(self, variable, value: int, highlight_type: int) -> None:
+    def highlight_value_in_variable(self, variable: str, value: int, highlight_type: int) -> None:
         row, col = SudokuBoard.get_row_col_from_variable_name(variable)
         self._entries[row - 1][col - 1].select_value(value, highlight_type)
 
@@ -326,7 +327,7 @@ class SudokuBoardSolverView(SudokuBoardBaseView):
 
 
 class OptionsPanelView(Frame):
-    def __init__(self, board_size: int, change_board_size_fn, master=None, **kw):
+    def __init__(self, board_size: int, change_board_size_fn: Callable, master=None, **kw) -> None:
         super().__init__(master, **kw)
         # A reference to the function is passed in so that the function call will not depend on the Tk hierarchy
         self.change_board_size_fn = change_board_size_fn
@@ -422,7 +423,7 @@ class OptionsPanelView(Frame):
         options['ForwardChecking'].pack(anchor=W)
         return options, board_size, algorithm, algorithm_options
 
-    def _on_press_board_size(self):
+    def _on_press_board_size(self) -> None:
         # Call function in SudokuCSPSolver
         self.change_board_size_fn(self._board_size.get())
 
@@ -464,7 +465,7 @@ class OptionsPanelView(Frame):
                 self._algorithm_options['MRV'].set(0)
                 self._algorithm_options['Degree'].set(0)
 
-    def is_algorithm_option_selected(self, option) -> bool:
+    def is_algorithm_option_selected(self, option: str) -> bool:
         return self._algorithm_options[option].get() == 1
 
 
@@ -496,7 +497,7 @@ class InfoPanelSectionsBacktracking(Enum):
 
 
 class InfoPanelView(Frame):
-    def __init__(self, go_to_step_fn, master=None, **kw):
+    def __init__(self, go_to_step_fn: Callable, master=None, **kw) -> None:
         super().__init__(master, **kw)
         # A reference to the function is passed in so that it can easily reference objects out of the current class's
         # scope.
@@ -668,7 +669,7 @@ class InfoPanelView(Frame):
     def go_to_last_step(self) -> None:
         self.go_to_step_fn(self._total_steps.cget('text'))
 
-    def set_step_controls(self):
+    def set_step_controls(self) -> None:
         # Make sure that controls are set correctly
         total_steps = int(self._total_steps.cget('text'))
         if total_steps <= 1:
@@ -692,7 +693,7 @@ class InfoPanelView(Frame):
             self._step_controls[StepControlButtons.NEXT].state(['!disabled', '!focus'])
             self._step_controls[StepControlButtons.LAST].state(['!disabled', '!focus'])
 
-    def set_section(self, section, obj) -> None:
+    def set_section(self, section: Union[InfoPanelSectionsAC3, InfoPanelSectionsBacktracking], obj) -> None:
         if self._visible_section is InfoPanelSectionTypes.AC3:
             if section is InfoPanelSectionsAC3.MESSAGE:
                 obj_string = obj if obj is not None else ""
@@ -770,7 +771,7 @@ class InfoPanelView(Frame):
 
 
 class SudokuCSPSolver:
-    def __init__(self):
+    def __init__(self) -> None:
         self.board_size = 9
         if len(sys.argv) == 2:
             if len(sys.argv[1]) == 4*4:
@@ -805,7 +806,7 @@ class SudokuCSPSolver:
     def run(self) -> None:
         self._root.mainloop()
 
-    def _make_gui(self) -> tuple:
+    def _make_gui(self) -> (Tk, dict, dict, Label, dict):
         """Create the tk GUI."""
         # Set dimensions for the two main panels of the application, to allow showing/hiding widgets without changing
         # the size of the window.
@@ -953,7 +954,7 @@ class SudokuCSPSolver:
         self._main_panel['info_panel'].go_to_first_step()
 
     @staticmethod
-    def puzzle_list_to_string(puzzle: list):
+    def puzzle_list_to_string(puzzle: list) -> str:
         # Turn integers to strings if necessary
         temp_list = [str(puzzle[i]) for i in range(len(puzzle))]
         puzzle_string = ''.join(temp_list)
@@ -994,7 +995,7 @@ class SudokuCSPSolver:
         color = 'red' if error else 'black'
         self._message.configure(foreground=color, text=text)
 
-    def change_board_size(self, size: int):
+    def change_board_size(self, size: int) -> None:
         # Hide current board
         self._board_view.grid_remove()
         # Show new board
@@ -1002,7 +1003,7 @@ class SudokuCSPSolver:
         self._board_view = self._board_views[str(self.board_size) + '_' + AppMode.INPUT.name]
         self._board_view.grid()
 
-    def set_controls(self, mode: AppMode):
+    def set_controls(self, mode: AppMode) -> None:
         if mode == AppMode.SOLVE:
             self.entry_disabled = True
             # for row in self.board_view.entries:
@@ -1018,14 +1019,14 @@ class SudokuCSPSolver:
             self._buttons['reset_button'].state(['disabled', '!focus'])
             self._buttons['clear_button'].state(['!disabled'])
 
-    def change_board_type(self, mode: AppMode):
+    def change_board_type(self, mode: AppMode) -> None:
         # Hide current board
         self._board_view.grid_remove()
         # Show new board
         self._board_view = self._board_views["{}_{}".format(str(self.board_size), mode.name)]
         self._board_view.grid()
 
-    def change_panel(self, panel_type: type):
+    def change_panel(self, panel_type: type) -> None:
         for panel in self._main_panel:
             if not isinstance(self._main_panel[panel], panel_type):
                 self._main_panel[panel].grid_remove()
