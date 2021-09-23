@@ -20,17 +20,17 @@ class Cell(Entry):
         )
         # Only allow 1 digit between 1-board_size in entry
         # Validation documentation under http://tcl.tk/man/tcl8.6/TkCmd/entry.htm#M16
-        command = (self.register(self.on_validate), "%P")
+        command = (self.register(self._on_validate), "%P")
         self.configure(validate="key", validatecommand=command)
-        self.max_digit = max_digit
+        self._max_digit = max_digit
 
-    def on_validate(self, new_value):
+    def _on_validate(self, new_value):
         """Validate that the input is a digit between 1 and the board size (4 or 9)."""
         if new_value == "":
             return True
         try:
             value = int(new_value)
-            if 0 < value <= self.max_digit:
+            if 0 < value <= self._max_digit:
                 return True
             else:
                 return False
@@ -65,13 +65,13 @@ class SolverCell(Frame):
         s.configure(self.selected_cell_highlighted_value_1_label, background='light yellow', foreground='red')
         s.configure(self.selected_cell_highlighted_value_2_label, background='light yellow', foreground='blue')
         self.max_digit = max_digit
-        self.domain = self.make_gui()
+        self._domain = self._make_gui()
         # Flag to specify whether this cell is currently selected
         self.selected = False
         # Set to unselected by default
         self.unselect_cell()
 
-    def make_gui(self):
+    def _make_gui(self):
         domain = []
         digit = 1
         # Positioning is not ideal (horizontal spacing is a bit too narrow), but this seems to be the best Tk can do.
@@ -112,15 +112,15 @@ class SolverCell(Frame):
             digit = digit_index+1
             if digit in new_domain:
                 # Make sure that the digit is shown if it's in the new domain
-                self.domain[digit_index].configure(text=str(digit))
+                self._domain[digit_index].configure(text=str(digit))
             else:
                 # Make sure that the digit is not shown if it's not in the new domain
-                self.domain[digit_index].configure(text=" ")
+                self._domain[digit_index].configure(text=" ")
 
     def select_cell(self):
         self.selected = True
         self.configure(style=self.selected_cell_frame)
-        for value_label in self.domain:
+        for value_label in self._domain:
             old_style = value_label.cget('style')
             if old_style == self.unselected_cell_label:
                 new_style = self.selected_cell_label
@@ -136,7 +136,7 @@ class SolverCell(Frame):
     def unselect_cell(self):
         self.selected = False
         self.configure(style=self.unselected_cell_frame)
-        for value_label in self.domain:
+        for value_label in self._domain:
             old_style = value_label.cget('style')
             if old_style == self.selected_cell_label:
                 new_style = self.unselected_cell_label
@@ -162,14 +162,14 @@ class SolverCell(Frame):
                 new_style = self.unselected_cell_highlighted_value_1_label
             else:
                 new_style = self.unselected_cell_highlighted_value_2_label
-        self.domain[value-1].configure(style=new_style)
+        self._domain[value - 1].configure(style=new_style)
 
     def unselect_value(self, value):
         if self.selected:
             new_style = self.selected_cell_label
         else:
             new_style = self.unselected_cell_label
-        self.domain[value-1].configure(style=new_style)
+        self._domain[value - 1].configure(style=new_style)
 
 
 class AppMode(Enum):
@@ -182,7 +182,7 @@ class SudokuBoardBaseView(Frame):
         super().__init__(master, **kw)
         self.board_size = board_size
 
-    def make_gui(self, is_solver) -> tuple:
+    def _make_gui(self, is_solver) -> tuple:
         """Create the tk GUI elements using grid geometry manager and images of separators."""
         entries = []
         # These need to be instance variables so that mainloop will be able to reference the images when rendering
@@ -240,13 +240,13 @@ class SudokuBoardBaseView(Frame):
 class SudokuBoardInputView(SudokuBoardBaseView):
     def __init__(self, board_size: int, master=None, **kw):
         super().__init__(board_size, master, **kw)
-        self.entries, self.images = self.make_gui(is_solver=False)
+        self._entries, self._images = self._make_gui(is_solver=False)
 
     def set_board(self, values, entry_disabled: bool) -> None:
         """Tk commands to set the board."""
         for row in range(self.board_size):
             for col in range(self.board_size):
-                entry = self.entries[row][col]
+                entry = self._entries[row][col]
                 # Keep value blank if 0
                 if isinstance(values, str):
                     value = values[row*self.board_size + col] if values[row*self.board_size + col] != '0' else ''
@@ -272,7 +272,7 @@ class SudokuBoardInputView(SudokuBoardBaseView):
         puzzle_as_list = []
         for row in range(self.board_size):
             for col in range(self.board_size):
-                value = self.entries[row][col].get()
+                value = self._entries[row][col].get()
                 digit = int(value) if value != '' else 0
                 puzzle_as_list.append(digit)
         return puzzle_as_list
@@ -281,41 +281,41 @@ class SudokuBoardInputView(SudokuBoardBaseView):
 class SudokuBoardSolverView(SudokuBoardBaseView):
     def __init__(self, board_size: int, master=None, **kw):
         super().__init__(board_size, master, **kw)
-        self.entries, self.images = self.make_gui(is_solver=True)
+        self._entries, self._images = self._make_gui(is_solver=True)
 
     def set_domains(self, domains: dict):
         """Set the domain values for each cell."""
         for row in range(self.board_size):
             for col in range(self.board_size):
                 variable_name = SudokuBoard.make_variable_name(row+1, col+1)
-                entry = self.entries[row][col]
+                entry = self._entries[row][col]
                 entry.update_domain(domains[variable_name])
 
     def highlight_current_variables(self, variables: list) -> None:
         for row in range(self.board_size):
             for col in range(self.board_size):
-                self.entries[row][col].unselect_cell()
+                self._entries[row][col].unselect_cell()
         for variable_name in variables:
             # Variable name starts at 1, 1
             row, col = SudokuBoard.get_row_col_from_variable_name(variable_name)
-            self.entries[row-1][col-1].select_cell()
+            self._entries[row - 1][col - 1].select_cell()
 
     def clear_all_highlighted_values(self) -> None:
         for row in range(self.board_size):
             for col in range(self.board_size):
                 for default_value in range(self.board_size):
-                    self.entries[row][col].unselect_value(default_value)
+                    self._entries[row][col].unselect_value(default_value)
 
     def highlight_value_in_variable(self, variable, value: int, highlight_type: int) -> None:
         row, col = SudokuBoard.get_row_col_from_variable_name(variable)
-        self.entries[row-1][col-1].select_value(value, highlight_type)
+        self._entries[row - 1][col - 1].select_value(value, highlight_type)
 
     def reset_board(self, puzzle: list) -> None:
         """Set all domains to puzzle default and clear all selected cells/values"""
         default_domain = [i+1 for i in range(self.board_size)]
         for row in range(self.board_size):
             for col in range(self.board_size):
-                entry = self.entries[row][col]
+                entry = self._entries[row][col]
                 if puzzle[row * self.board_size + col] != 0:
                     values = [puzzle[row*self.board_size + col]]
                 else:
@@ -330,9 +330,10 @@ class OptionsPanelView(Frame):
         super().__init__(master, **kw)
         # A reference to the function is passed in so that the function call will not depend on the Tk hierarchy
         self.change_board_size_fn = change_board_size_fn
-        self.options, self.board_size, self.algorithm, self.algorithm_options = self.make_gui(board_size)
+        # Need to mangle _options to avoid conflict with Tk's _options function
+        self.__options, self._board_size, self._algorithm, self._algorithm_options = self._make_gui(board_size)
 
-    def make_gui(self, size: int) -> (dict, int, int, dict):
+    def _make_gui(self, size: int) -> (dict, int, int, dict):
         Label(self, text="Options", font="TkHeadingFont 16").pack(fill=X)
         # Spacer
         Label(self).pack(side=TOP)
@@ -361,27 +362,27 @@ class OptionsPanelView(Frame):
             '9x9': Radiobutton(
                 board_size_frame,
                 text="9x9",
-                command=self.on_press_board_size,
+                command=self._on_press_board_size,
                 variable=board_size,
                 value=9),
             '4x4': Radiobutton(
                 board_size_frame,
                 text="4x4",
-                command=self.on_press_board_size,
+                command=self._on_press_board_size,
                 variable=board_size,
                 value=4),
             'AC3': Radiobutton(
                 algorithm_frame,
                 text="Constraint Propagation (AC-3)",
                 variable=algorithm,
-                command=(lambda: self.update_algorithm_checkbuttons('AC3')),
+                command=(lambda: self._update_algorithm_checkbuttons('AC3')),
                 # Value needs to be an int type, not an IntEnum. Otherwise, .get() will not work.
                 value=AlgorithmTypes.AC3.value),
             'BacktrackingSearch': Radiobutton(
                 algorithm_frame,
                 text="Backtracking Search",
                 variable=algorithm,
-                command=(lambda: self.update_algorithm_checkbuttons('BacktrackingSearch')),
+                command=(lambda: self._update_algorithm_checkbuttons('BacktrackingSearch')),
                 value=AlgorithmTypes.BACKTRACKING_SEARCH.value)
         }
         algorithm_options = {}
@@ -401,7 +402,7 @@ class OptionsPanelView(Frame):
             options[key] = Checkbutton(
                 algorithm_options_frame,
                 text=description,
-                command=(lambda button=key: self.update_algorithm_checkbuttons(button)),
+                command=(lambda button=key: self._update_algorithm_checkbuttons(button)),
                 variable=algorithm_options[key]
             )
             Hovertip(options[key], tooltip_text)
@@ -421,14 +422,14 @@ class OptionsPanelView(Frame):
         options['ForwardChecking'].pack(anchor=W)
         return options, board_size, algorithm, algorithm_options
 
-    def on_press_board_size(self):
+    def _on_press_board_size(self):
         # Call function in SudokuCSPSolver
-        self.change_board_size_fn(self.board_size.get())
+        self.change_board_size_fn(self._board_size.get())
 
     def get_algorithm_value(self) -> int:
-        return self.algorithm.get()
+        return self._algorithm.get()
 
-    def update_algorithm_checkbuttons(self, button: str) -> None:
+    def _update_algorithm_checkbuttons(self, button: str) -> None:
         # Define updates based on the checkbutton or radiobutton being pressed
         algorithm_options = [
             'MRV',
@@ -439,32 +440,32 @@ class OptionsPanelView(Frame):
         if button == 'AC3':
             # Disable algorithm options
             for option in algorithm_options:
-                self.options[option].state(['disabled'])
+                self.__options[option].state(['disabled'])
         elif button == 'BacktrackingSearch':
             # Enable algorithm options
             for option in algorithm_options:
-                self.options[option].state(['!disabled'])
+                self.__options[option].state(['!disabled'])
         elif button == 'MRV':
-            if self.algorithm_options['MRV'].get() == 0:
+            if self._algorithm_options['MRV'].get() == 0:
                 # If MRV heuristic is unchecked, make sure Degree heuristic is also unchecked.
-                self.algorithm_options['Degree'].set(0)
+                self._algorithm_options['Degree'].set(0)
             else:
                 # If MRV heuristic is checked, make sure that forward checking is also checked.
-                self.algorithm_options['ForwardChecking'].set(1)
+                self._algorithm_options['ForwardChecking'].set(1)
         elif button == 'Degree':
-            if self.algorithm_options['Degree'].get() == 1:
+            if self._algorithm_options['Degree'].get() == 1:
                 # If Degree heuristic is checked, make sure MRV heuristic and forward checking are also checked.
-                self.algorithm_options['MRV'].set(1)
-                self.algorithm_options['ForwardChecking'].set(1)
+                self._algorithm_options['MRV'].set(1)
+                self._algorithm_options['ForwardChecking'].set(1)
         elif button == 'ForwardChecking':
-            if self.algorithm_options['ForwardChecking'].get() == 0:
+            if self._algorithm_options['ForwardChecking'].get() == 0:
                 # If forward checking is unchecked, make sure that MRV heuristic and Degree heuristic are also
                 # unchecked.
-                self.algorithm_options['MRV'].set(0)
-                self.algorithm_options['Degree'].set(0)
+                self._algorithm_options['MRV'].set(0)
+                self._algorithm_options['Degree'].set(0)
 
     def is_algorithm_option_selected(self, option) -> bool:
-        return self.algorithm_options[option].get() == 1
+        return self._algorithm_options[option].get() == 1
 
 
 class StepControlButtons(Enum):
@@ -502,12 +503,12 @@ class InfoPanelView(Frame):
         self.go_to_step_fn = go_to_step_fn
         # Don't automatically associate the value with the widget but set it manually, as users may enter invalid info.
         self.current_step = 1
-        self.current_step_entry, self.total_steps, self.step_controls, self.sections, self.images = self.make_gui()
+        self._current_step_entry, self._total_steps, self._step_controls, self._sections, self._images = self._make_gui()
         # Keep track of which section should be visible (none by default)
-        self.visible_section = InfoPanelSectionTypes.none
+        self._visible_section = InfoPanelSectionTypes.none
         self.change_section(InfoPanelSectionTypes.none)
 
-    def make_gui(self) -> (Entry, Label, dict, dict, dict):
+    def _make_gui(self) -> (Entry, Label, dict, dict, dict):
         # These need to be instance variables so that mainloop will be able to reference the images when rendering
         images = {
             'first_step_img': PhotoImage(file="assets/step_first.png"),
@@ -533,7 +534,7 @@ class InfoPanelView(Frame):
 
         # We create a function variable instead of just using a lambda, as .bind() passes in the event as the argument
         def onEnter():
-            self.go_to_step_fn(self.current_step_entry.get())
+            self.go_to_step_fn(self._current_step_entry.get())
         current_step_entry.bind(
             '<Return>',
             (lambda event: onEnter())
@@ -649,11 +650,11 @@ class InfoPanelView(Frame):
 
     def set_current_step(self, step: int) -> None:
         self.current_step = step
-        self.current_step_entry.delete('0', END)
-        self.current_step_entry.insert(INSERT, str(step))
+        self._current_step_entry.delete('0', END)
+        self._current_step_entry.insert(INSERT, str(step))
 
     def set_total_steps(self, num_steps: int) -> None:
-        self.total_steps.configure(text=str(num_steps))
+        self._total_steps.configure(text=str(num_steps))
 
     def go_to_first_step(self) -> None:
         self.go_to_step_fn('1')
@@ -665,57 +666,57 @@ class InfoPanelView(Frame):
         self.go_to_step_fn(str(self.current_step + 1))
 
     def go_to_last_step(self) -> None:
-        self.go_to_step_fn(self.total_steps.cget('text'))
+        self.go_to_step_fn(self._total_steps.cget('text'))
 
     def set_step_controls(self):
         # Make sure that controls are set correctly
-        total_steps = int(self.total_steps.cget('text'))
+        total_steps = int(self._total_steps.cget('text'))
         if total_steps <= 1:
-            self.step_controls[StepControlButtons.FIRST].state(['disabled', '!focus'])
-            self.step_controls[StepControlButtons.PREVIOUS].state(['disabled', '!focus'])
-            self.step_controls[StepControlButtons.NEXT].state(['disabled', '!focus'])
-            self.step_controls[StepControlButtons.LAST].state(['disabled', '!focus'])
+            self._step_controls[StepControlButtons.FIRST].state(['disabled', '!focus'])
+            self._step_controls[StepControlButtons.PREVIOUS].state(['disabled', '!focus'])
+            self._step_controls[StepControlButtons.NEXT].state(['disabled', '!focus'])
+            self._step_controls[StepControlButtons.LAST].state(['disabled', '!focus'])
         elif self.current_step == 1:
-            self.step_controls[StepControlButtons.FIRST].state(['disabled', '!focus'])
-            self.step_controls[StepControlButtons.PREVIOUS].state(['disabled', '!focus'])
-            self.step_controls[StepControlButtons.NEXT].state(['!disabled', '!focus'])
-            self.step_controls[StepControlButtons.LAST].state(['!disabled', '!focus'])
+            self._step_controls[StepControlButtons.FIRST].state(['disabled', '!focus'])
+            self._step_controls[StepControlButtons.PREVIOUS].state(['disabled', '!focus'])
+            self._step_controls[StepControlButtons.NEXT].state(['!disabled', '!focus'])
+            self._step_controls[StepControlButtons.LAST].state(['!disabled', '!focus'])
         elif self.current_step == total_steps:
-            self.step_controls[StepControlButtons.FIRST].state(['!disabled', '!focus'])
-            self.step_controls[StepControlButtons.PREVIOUS].state(['!disabled', '!focus'])
-            self.step_controls[StepControlButtons.NEXT].state(['disabled', '!focus'])
-            self.step_controls[StepControlButtons.LAST].state(['disabled', '!focus'])
+            self._step_controls[StepControlButtons.FIRST].state(['!disabled', '!focus'])
+            self._step_controls[StepControlButtons.PREVIOUS].state(['!disabled', '!focus'])
+            self._step_controls[StepControlButtons.NEXT].state(['disabled', '!focus'])
+            self._step_controls[StepControlButtons.LAST].state(['disabled', '!focus'])
         else:
-            self.step_controls[StepControlButtons.FIRST].state(['!disabled', '!focus'])
-            self.step_controls[StepControlButtons.PREVIOUS].state(['!disabled', '!focus'])
-            self.step_controls[StepControlButtons.NEXT].state(['!disabled', '!focus'])
-            self.step_controls[StepControlButtons.LAST].state(['!disabled', '!focus'])
+            self._step_controls[StepControlButtons.FIRST].state(['!disabled', '!focus'])
+            self._step_controls[StepControlButtons.PREVIOUS].state(['!disabled', '!focus'])
+            self._step_controls[StepControlButtons.NEXT].state(['!disabled', '!focus'])
+            self._step_controls[StepControlButtons.LAST].state(['!disabled', '!focus'])
 
     def set_section(self, section, obj) -> None:
-        if self.visible_section is InfoPanelSectionTypes.AC3:
+        if self._visible_section is InfoPanelSectionTypes.AC3:
             if section is InfoPanelSectionsAC3.MESSAGE:
                 obj_string = obj if obj is not None else ""
-                self.sections[section].configure(text=obj_string)
+                self._sections[section].configure(text=obj_string)
             elif section is InfoPanelSectionsAC3.CURRENT_ARC:
                 obj_string = "{}, {}".format(obj[0], obj[1]) if obj is not None and len(obj) == 2 else ""
-                self.sections[section].configure(text=obj_string)
+                self._sections[section].configure(text=obj_string)
             elif section is InfoPanelSectionsAC3.CURRENT_QUEUE:
                 obj_string = ""
                 if obj is not None:
                     obj_list = ["{}, {}".format(i[0], i[1]) for i in list(obj)]
                     obj_string = '\n'.join(obj_list)
                 # Need to enable to set text
-                self.sections[section].configure(state=NORMAL)
+                self._sections[section].configure(state=NORMAL)
                 # First line, first character to end of text
-                self.sections[section].delete('1.0', END)
-                self.sections[section].insert(INSERT, obj_string)
-                self.sections[section].configure(state=DISABLED)
+                self._sections[section].delete('1.0', END)
+                self._sections[section].insert(INSERT, obj_string)
+                self._sections[section].configure(state=DISABLED)
             else:
                 raise ValueError("No behavior defined for given section")
-        elif self.visible_section is InfoPanelSectionTypes.BACKTRACKING:
+        elif self._visible_section is InfoPanelSectionTypes.BACKTRACKING:
             if section is InfoPanelSectionsBacktracking.MESSAGE:
                 obj_string = obj if obj is not None else ""
-                self.sections[section].configure(text=obj_string)
+                self._sections[section].configure(text=obj_string)
             elif section is InfoPanelSectionsBacktracking.CURRENT_ASSIGNMENT:
                 obj_string = ""
                 if obj is not None:
@@ -723,49 +724,49 @@ class InfoPanelView(Frame):
                     obj_list = ["'{}'={}".format(var_name, obj[var_name]) for var_name in sorted(obj.keys())]
                     obj_string = '\n'.join(obj_list)
                 # Need to enable to set text
-                self.sections[section].configure(state=NORMAL)
+                self._sections[section].configure(state=NORMAL)
                 # First line, first character to end of text
-                self.sections[section].delete('1.0', END)
-                self.sections[section].insert(INSERT, obj_string)
-                self.sections[section].configure(state=DISABLED)
+                self._sections[section].delete('1.0', END)
+                self._sections[section].insert(INSERT, obj_string)
+                self._sections[section].configure(state=DISABLED)
             elif section is InfoPanelSectionsBacktracking.CURRENT_VARIABLE:
                 obj_string = obj if obj is not None else ""
-                self.sections[section].configure(text=obj_string)
+                self._sections[section].configure(text=obj_string)
             elif section is InfoPanelSectionsBacktracking.ORDERED_VALUES:
                 obj_string = ""
                 if obj is not None:
                     obj_list = [str(i) for i in obj]
                     obj_string = ', '.join(obj_list)
-                self.sections[section].configure(text=obj_string)
+                self._sections[section].configure(text=obj_string)
             elif section is InfoPanelSectionsBacktracking.CURRENT_VALUE:
                 obj_string = str(obj) if obj is not None else ""
-                self.sections[section].configure(text=obj_string)
+                self._sections[section].configure(text=obj_string)
 
     def reset_panel(self) -> None:
         self.current_step = 1
-        self.current_step_entry.delete('0', END)
+        self._current_step_entry.delete('0', END)
         self.set_total_steps(0)
         self.set_step_controls()
-        if self.visible_section is InfoPanelSectionTypes.AC3:
+        if self._visible_section is InfoPanelSectionTypes.AC3:
             for section in InfoPanelSectionsAC3:
                 self.set_section(section, None)
-        elif self.visible_section is InfoPanelSectionTypes.BACKTRACKING:
+        elif self._visible_section is InfoPanelSectionTypes.BACKTRACKING:
             for section in InfoPanelSectionsBacktracking:
                 self.set_section(section, None)
         else:
             pass
 
     def change_section(self, section: InfoPanelSectionTypes) -> None:
-        self.visible_section = section
+        self._visible_section = section
         if section is InfoPanelSectionTypes.AC3:
-            self.sections[InfoPanelSectionTypes.BACKTRACKING].pack_forget()
-            self.sections[InfoPanelSectionTypes.AC3].pack()
+            self._sections[InfoPanelSectionTypes.BACKTRACKING].pack_forget()
+            self._sections[InfoPanelSectionTypes.AC3].pack()
         elif section is InfoPanelSectionTypes.BACKTRACKING:
-            self.sections[InfoPanelSectionTypes.AC3].pack_forget()
-            self.sections[InfoPanelSectionTypes.BACKTRACKING].pack()
+            self._sections[InfoPanelSectionTypes.AC3].pack_forget()
+            self._sections[InfoPanelSectionTypes.BACKTRACKING].pack()
         else:
-            self.sections[InfoPanelSectionTypes.AC3].pack_forget()
-            self.sections[InfoPanelSectionTypes.BACKTRACKING].pack_forget()
+            self._sections[InfoPanelSectionTypes.AC3].pack_forget()
+            self._sections[InfoPanelSectionTypes.BACKTRACKING].pack_forget()
 
 
 class SudokuCSPSolver:
@@ -778,21 +779,21 @@ class SudokuCSPSolver:
                 self.board_size = 9
             else:
                 raise ValueError("The initial puzzle string has an invalid length.")
-        self.root, self.board_views, self.main_panel, self.message, self.buttons = self.make_gui()
+        self._root, self._board_views, self._main_panel, self._message, self._buttons = self._make_gui()
         initial_board = str(self.board_size)+'_'+AppMode.INPUT.name
-        self.board_view = self.board_views[initial_board]
+        self._board_view = self._board_views[initial_board]
         # Hide the board(s) that are not active
-        for view in self.board_views:
+        for view in self._board_views:
             if view != initial_board:
-                self.board_views[view].grid_remove()
+                self._board_views[view].grid_remove()
         # Only show the options panel
-        for panel in self.main_panel:
-            if not isinstance(self.main_panel[panel], OptionsPanelView):
-                self.main_panel[panel].grid_remove()
+        for panel in self._main_panel:
+            if not isinstance(self._main_panel[panel], OptionsPanelView):
+                self._main_panel[panel].grid_remove()
         self.entry_disabled = False
         # Fill out cells with initial values if applicable
         if len(sys.argv) == 2:
-            self.board_view.set_board(values=sys.argv[1], entry_disabled=self.entry_disabled)
+            self._board_view.set_board(values=sys.argv[1], entry_disabled=self.entry_disabled)
         # Store the current puzzle
         self.puzzle = None
         # Store history of solver
@@ -802,9 +803,9 @@ class SudokuCSPSolver:
         self.csp = None
 
     def run(self) -> None:
-        self.root.mainloop()
+        self._root.mainloop()
 
-    def make_gui(self) -> tuple:
+    def _make_gui(self) -> tuple:
         """Create the tk GUI."""
         # Set dimensions for the two main panels of the application, to allow showing/hiding widgets without changing
         # the size of the window.
@@ -878,7 +879,7 @@ class SudokuCSPSolver:
         if not self.validate_options():
             return
         # Read cells and create Sudoku board
-        puzzle_as_list = self.board_view.get_board()
+        puzzle_as_list = self._board_view.get_board()
         # Save off board. We don't use SudokuBoard.to_list() as it depends on a valid puzzle.
         self.puzzle = puzzle_as_list
         # Create the Sudoku
@@ -895,7 +896,7 @@ class SudokuCSPSolver:
         # Change to information panel
         self.change_panel(InfoPanelView)
         # Solve using selected options
-        self.selected_algorithm = AlgorithmTypes(self.main_panel['options_panel'].get_algorithm_value())
+        self.selected_algorithm = AlgorithmTypes(self._main_panel['options_panel'].get_algorithm_value())
         # Change information panel's section to match the algorithm
         if self.selected_algorithm is AlgorithmTypes.AC3:
             section_type = InfoPanelSectionTypes.AC3
@@ -903,7 +904,7 @@ class SudokuCSPSolver:
             section_type = InfoPanelSectionTypes.BACKTRACKING
         else:
             section_type = InfoPanelSectionTypes.none
-        self.main_panel['info_panel'].change_section(section_type)
+        self._main_panel['info_panel'].change_section(section_type)
         self.csp = board.generate_csp()
         if self.selected_algorithm == AlgorithmTypes.AC3:
             algorithm_runner = AC3(self.csp, record_history=True)
@@ -911,13 +912,13 @@ class SudokuCSPSolver:
             suv_heuristic = SelectUnassignedVariableHeuristics.none
             odv_heuristic = OrderDomainValuesHeuristics.none
             inference_fn = InferenceFunctions.none
-            if self.main_panel['options_panel'].is_algorithm_option_selected('MRV'):
+            if self._main_panel['options_panel'].is_algorithm_option_selected('MRV'):
                 suv_heuristic = SelectUnassignedVariableHeuristics.MRV
-            if self.main_panel['options_panel'].is_algorithm_option_selected('Degree'):
+            if self._main_panel['options_panel'].is_algorithm_option_selected('Degree'):
                 suv_heuristic = SelectUnassignedVariableHeuristics.DegreeHeuristic
-            if self.main_panel['options_panel'].is_algorithm_option_selected('LCV'):
+            if self._main_panel['options_panel'].is_algorithm_option_selected('LCV'):
                 odv_heuristic = OrderDomainValuesHeuristics.LCV
-            if self.main_panel['options_panel'].is_algorithm_option_selected('ForwardChecking'):
+            if self._main_panel['options_panel'].is_algorithm_option_selected('ForwardChecking'):
                 inference_fn = InferenceFunctions.ForwardChecking
             algorithm_runner = BacktrackingSearch(
                 csp=self.csp,
@@ -947,9 +948,9 @@ class SudokuCSPSolver:
         # Store history in instance so it will be accessible to other methods
         self.history = algorithm_runner.history
         num_steps = len(self.history)
-        self.main_panel['info_panel'].set_total_steps(num_steps)
+        self._main_panel['info_panel'].set_total_steps(num_steps)
         # Set first step in history
-        self.main_panel['info_panel'].go_to_first_step()
+        self._main_panel['info_panel'].go_to_first_step()
 
     @staticmethod
     def puzzle_list_to_string(puzzle: list):
@@ -972,34 +973,34 @@ class SudokuCSPSolver:
         """Reset Sudoku board from solved state to original state."""
         # Remove any existing messages
         self.reset_message()
-        self.board_view.reset_board(self.puzzle)
+        self._board_view.reset_board(self.puzzle)
         self.set_controls(AppMode.INPUT)
         self.change_board_type(AppMode.INPUT)
-        self.main_panel['info_panel'].reset_panel()
+        self._main_panel['info_panel'].reset_panel()
         self.change_panel(OptionsPanelView)
 
     def clear(self) -> None:
         """Clear all cells in the Sudoku puzzle."""
         # Remove any existing messages
         self.reset_message()
-        self.board_view.clear_board()
+        self._board_view.clear_board()
 
     def reset_message(self) -> None:
         """Reset the message UI element."""
-        self.message.configure(foreground='black', text="")
+        self._message.configure(foreground='black', text="")
 
     def set_message(self, text: str, error: bool = False) -> None:
         """Set the message UI element."""
         color = 'red' if error else 'black'
-        self.message.configure(foreground=color, text=text)
+        self._message.configure(foreground=color, text=text)
 
     def change_board_size(self, size: int):
         # Hide current board
-        self.board_view.grid_remove()
+        self._board_view.grid_remove()
         # Show new board
         self.board_size = size
-        self.board_view = self.board_views[str(self.board_size)+'_'+AppMode.INPUT.name]
-        self.board_view.grid()
+        self._board_view = self._board_views[str(self.board_size) + '_' + AppMode.INPUT.name]
+        self._board_view.grid()
 
     def set_controls(self, mode: AppMode):
         if mode == AppMode.SOLVE:
@@ -1008,28 +1009,28 @@ class SudokuCSPSolver:
             #     for entry in row:
             #         entry.configure(state=DISABLED)
             # Need to remove keyboard focus when disabling button being pressed
-            self.buttons['solve_button'].state(['disabled', '!focus'])
-            self.buttons['reset_button'].state(['!disabled'])
-            self.buttons['clear_button'].state(['disabled'])
+            self._buttons['solve_button'].state(['disabled', '!focus'])
+            self._buttons['reset_button'].state(['!disabled'])
+            self._buttons['clear_button'].state(['disabled'])
         else:
             self.entry_disabled = False
-            self.buttons['solve_button'].state(['!disabled'])
-            self.buttons['reset_button'].state(['disabled', '!focus'])
-            self.buttons['clear_button'].state(['!disabled'])
+            self._buttons['solve_button'].state(['!disabled'])
+            self._buttons['reset_button'].state(['disabled', '!focus'])
+            self._buttons['clear_button'].state(['!disabled'])
 
     def change_board_type(self, mode: AppMode):
         # Hide current board
-        self.board_view.grid_remove()
+        self._board_view.grid_remove()
         # Show new board
-        self.board_view = self.board_views["{}_{}".format(str(self.board_size), mode.name)]
-        self.board_view.grid()
+        self._board_view = self._board_views["{}_{}".format(str(self.board_size), mode.name)]
+        self._board_view.grid()
 
     def change_panel(self, panel_type: type):
-        for panel in self.main_panel:
-            if not isinstance(self.main_panel[panel], panel_type):
-                self.main_panel[panel].grid_remove()
+        for panel in self._main_panel:
+            if not isinstance(self._main_panel[panel], panel_type):
+                self._main_panel[panel].grid_remove()
             else:
-                self.main_panel[panel].grid()
+                self._main_panel[panel].grid()
 
     def go_to_step(self, step_string: str) -> None:
         # Clear message first
@@ -1045,67 +1046,67 @@ class SudokuCSPSolver:
             return
         history_step = self.history[step-1]
         # Set info panel
-        self.main_panel['info_panel'].set_current_step(step)
-        self.main_panel['info_panel'].set_step_controls()
+        self._main_panel['info_panel'].set_current_step(step)
+        self._main_panel['info_panel'].set_step_controls()
         if self.selected_algorithm is AlgorithmTypes.AC3:
             # Set board
-            self.board_view.highlight_current_variables(history_step[AC3HistoryItems.CURRENT_ARC])
-            self.board_view.set_domains(history_step[AC3HistoryItems.DOMAINS])
+            self._board_view.highlight_current_variables(history_step[AC3HistoryItems.CURRENT_ARC])
+            self._board_view.set_domains(history_step[AC3HistoryItems.DOMAINS])
             # Change all necessary widgets to reflect info in new step
-            self.main_panel['info_panel'].set_section(
+            self._main_panel['info_panel'].set_section(
                 InfoPanelSectionsAC3.MESSAGE,
                 history_step[AC3HistoryItems.MESSAGE]
             )
-            self.main_panel['info_panel'].set_section(
+            self._main_panel['info_panel'].set_section(
                 InfoPanelSectionsAC3.CURRENT_ARC,
                 history_step[AC3HistoryItems.CURRENT_ARC]
             )
-            self.main_panel['info_panel'].set_section(
+            self._main_panel['info_panel'].set_section(
                 InfoPanelSectionsAC3.CURRENT_QUEUE,
                 history_step[AC3HistoryItems.CURRENT_QUEUE]
             )
         elif self.selected_algorithm is AlgorithmTypes.BACKTRACKING_SEARCH:
             # Set board
             # Clear any previous highlighted values
-            self.board_view.clear_all_highlighted_values()
+            self._board_view.clear_all_highlighted_values()
             current_variable = history_step[BacktrackingSearchHistoryItems.CURRENT_VARIABLE]
             if current_variable is not None:
                 highlight_variables = [current_variable]
             else:
                 # Pass in an empty list to deselect all variables
                 highlight_variables = []
-            self.board_view.highlight_current_variables(highlight_variables)
+            self._board_view.highlight_current_variables(highlight_variables)
             current_value = history_step[BacktrackingSearchHistoryItems.CURRENT_VALUE]
             if current_value is not None:
-                self.board_view.highlight_value_in_variable(current_variable, current_value, highlight_type=1)
+                self._board_view.highlight_value_in_variable(current_variable, current_value, highlight_type=1)
             # Set assignment after current value so that when the current value gets assigned to the variable, it will
             # be highlighted as an assignment.
             assignment = history_step[BacktrackingSearchHistoryItems.CURRENT_ASSIGNMENT]
             for variable in assignment.keys():
-                self.board_view.highlight_value_in_variable(variable, assignment[variable], highlight_type=2)
+                self._board_view.highlight_value_in_variable(variable, assignment[variable], highlight_type=2)
             domains = history_step[BacktrackingSearchHistoryItems.INFERENCES]
             if domains is None:
                 # Show all values if there's no inferencing
                 domains = self.csp.get_all_domains()
-            self.board_view.set_domains(domains)
+            self._board_view.set_domains(domains)
             # Change all necessary widgets to reflect info in new step
-            self.main_panel['info_panel'].set_section(
+            self._main_panel['info_panel'].set_section(
                 InfoPanelSectionsBacktracking.MESSAGE,
                 history_step[BacktrackingSearchHistoryItems.MESSAGE]
             )
-            self.main_panel['info_panel'].set_section(
+            self._main_panel['info_panel'].set_section(
                 InfoPanelSectionsBacktracking.CURRENT_ASSIGNMENT,
                 assignment
             )
-            self.main_panel['info_panel'].set_section(
+            self._main_panel['info_panel'].set_section(
                 InfoPanelSectionsBacktracking.CURRENT_VARIABLE,
                 current_variable
             )
-            self.main_panel['info_panel'].set_section(
+            self._main_panel['info_panel'].set_section(
                 InfoPanelSectionsBacktracking.ORDERED_VALUES,
                 history_step[BacktrackingSearchHistoryItems.ORDERED_VALUES]
             )
-            self.main_panel['info_panel'].set_section(
+            self._main_panel['info_panel'].set_section(
                 InfoPanelSectionsBacktracking.CURRENT_VALUE,
                 current_value
             )
@@ -1114,12 +1115,12 @@ class SudokuCSPSolver:
 
     def validate_options(self) -> bool:
         # Use the raw Enum value so we can check if it's not in AlgorithmTypes
-        selected_algorithm = self.main_panel['options_panel'].get_algorithm_value()
+        selected_algorithm = self._main_panel['options_panel'].get_algorithm_value()
         if selected_algorithm != AlgorithmTypes.AC3 and selected_algorithm != AlgorithmTypes.BACKTRACKING_SEARCH:
             self.set_message("No algorithm selected", error=True)
             return False
         if self.board_size == 9 and selected_algorithm == AlgorithmTypes.BACKTRACKING_SEARCH and \
-                not self.main_panel['options_panel'].is_algorithm_option_selected('MRV'):
+                not self._main_panel['options_panel'].is_algorithm_option_selected('MRV'):
             self.set_message("Minimum-remaining-values heuristic must be selected for backtracking search when the " +
                              "board size is 9x9", error=True)
             return False

@@ -15,13 +15,13 @@ class ConstraintSatisfactionProblem:
         if len(variables) != len(domains):
             raise ValueError("Number of domains must match number of variables")
         self.variables = variables
-        self.domains = {}
+        self._domains = {}
         for i in range(len(variables)):
-            self.domains[variables[i]] = domains[i]
+            self._domains[variables[i]] = domains[i]
         # Create dictionary of dictionaries for fast constraint lookup
         # Assumes constraints are in the form (variable 1, variable 2, constraint function) where the constraint
         # function returns true if constraint is satisfied.
-        self.constraints = {}
+        self._constraints = {}
         for first_var, second_var, constraint_func in constraints:
             # AC-3 seems to assume symmetric constraints, so we add both ways
             constraints_to_add = [
@@ -31,35 +31,32 @@ class ConstraintSatisfactionProblem:
             for constraint in constraints_to_add:
                 # Okay to shadow as we don't use the original values anymore
                 first_var, second_var, constraint_func = constraint
-                if first_var not in self.constraints.keys():
-                    self.constraints[first_var] = {}
-                if second_var not in self.constraints[first_var].keys():
-                    self.constraints[first_var][second_var] = [constraint_func]
-                elif constraint_func not in self.constraints[first_var][second_var]:
+                if first_var not in self._constraints.keys():
+                    self._constraints[first_var] = {}
+                if second_var not in self._constraints[first_var].keys():
+                    self._constraints[first_var][second_var] = [constraint_func]
+                elif constraint_func not in self._constraints[first_var][second_var]:
                     # Only add constraint if it's not already there due to a prior symmetric constraint
-                    self.constraints[first_var][second_var].append(constraint_func)
+                    self._constraints[first_var][second_var].append(constraint_func)
         # Bookkeeping variables
-        self.neighbors = {}
-        for key in self.constraints.keys():
-            self.neighbors[key] = self.constraints[key].keys()
-
-    def get_variables(self):
-        return self.variables
+        self._neighbors = {}
+        for key in self._constraints.keys():
+            self._neighbors[key] = self._constraints[key].keys()
 
     def get_neighbors(self, variable):
-        return self.neighbors[variable]
+        return self._neighbors[variable]
 
     def get_domain(self, variable):
-        return self.domains[variable]
+        return self._domains[variable]
 
     def get_all_domains(self):
-        return self.domains
+        return self._domains
 
     def get_constraints(self, first_var, second_var):
-        return self.constraints[first_var][second_var]
+        return self._constraints[first_var][second_var]
 
     def delete_from_domain(self, variable, value):
-        self.domains[variable].remove(value)
+        self._domains[variable].remove(value)
 
 
 class AC3HistoryItems(Enum):
@@ -78,20 +75,20 @@ class AC3:
         self.history = []
 
     def run(self):
-        self.is_consistent = self.run_algorithm()
+        self.is_consistent = self._run_algorithm()
         if self.is_consistent:
             self.solution = {}
-            for variable in self.csp.get_variables():
+            for variable in self.csp.variables:
                 # This can return multiple values for a variable if there are multiple solutions.
                 self.solution[variable] = self.csp.get_domain(variable)
         return self.solution
 
     # Based on AC-3 pseudo-code from AIMA 3rd ed. Chapter 6
-    def run_algorithm(self) -> bool:
+    def _run_algorithm(self) -> bool:
         # Add all variable pairs as arcs. Arcs A->B and B->A should both be added so that the values in A and B can be
         # tested against each other.
         queue = []
-        for first_var in self.csp.get_variables():
+        for first_var in self.csp.variables:
             for second_var in self.csp.get_neighbors(first_var):
                 queue.append((first_var, second_var))
         if self.record_history:
@@ -116,7 +113,7 @@ class AC3:
                     AC3HistoryItems.MESSAGE: "Popped arc from queue."
                 }
                 self.history.append(history_item)
-            if self.revise(first_var, second_var):
+            if self._revise(first_var, second_var):
                 if self.record_history:
                     history_item = {
                         AC3HistoryItems.CURRENT_ARC: (first_var, second_var),
@@ -141,7 +138,7 @@ class AC3:
             self.history[-1][AC3HistoryItems.MESSAGE] += " Search has completed."
         return True
 
-    def revise(self, first_var, second_var) -> bool:
+    def _revise(self, first_var, second_var) -> bool:
         revised = False
         for first_var_value in self.csp.get_domain(first_var):
             constraints_satisfiable = False
@@ -215,28 +212,28 @@ class BacktrackingSearch:
         self.history = []
 
     def run(self):
-        self.solution = self.run_algorithm()
+        self.solution = self._run_algorithm()
         return self.solution
 
     # Based on Backtracking-Search pseudo-code from AIMA 3rd ed. Chapter 6
-    def run_algorithm(self):
-        return self.backtrack({}, None)
+    def _run_algorithm(self):
+        return self._backtrack({}, None)
 
-    def backtrack(self, assignment: dict, inferences):
-        if self.complete_assignment(assignment):
+    def _backtrack(self, assignment: dict, inferences):
+        if self._complete_assignment(assignment):
             if self.record_history:
-                history_item = self.create_history_item(
+                history_item = self._create_history_item(
                     assignment=assignment,
                     inferences=inferences,
                     message="Assignment is complete."
                 )
                 self.history.append(history_item)
             return assignment
-        variable = self.select_unassigned_variable(assignment, inferences)
-        ordered_values = self.order_domain_values(variable, assignment, inferences)
+        variable = self._select_unassigned_variable(assignment, inferences)
+        ordered_values = self._order_domain_values(variable, assignment, inferences)
         for value in ordered_values:
             if self.record_history:
-                history_item = self.create_history_item(
+                history_item = self._create_history_item(
                     assignment=assignment,
                     inferences=inferences,
                     current_variable=variable,
@@ -245,11 +242,11 @@ class BacktrackingSearch:
                     message="Selected variable and value."
                 )
                 self.history.append(history_item)
-            if self.is_consistent(variable, value, assignment):
+            if self._is_consistent(variable, value, assignment):
                 assignment[variable] = value
-                new_inferences = self.inference(variable, value, self.inference_function, inferences)
+                new_inferences = self._inference(variable, value, self.inference_function, inferences)
                 if self.record_history:
-                    history_item = self.create_history_item(
+                    history_item = self._create_history_item(
                         assignment=assignment,
                         inferences=new_inferences,
                         current_variable=variable,
@@ -260,14 +257,14 @@ class BacktrackingSearch:
                     self.history.append(history_item)
                 # Only continue if there are valid inferences. Otherwise, it means there will be a variable with no
                 # valid assignment.
-                new_inferences_valid = self.all_domains_have_values(new_inferences)
+                new_inferences_valid = self._all_domains_have_values(new_inferences)
                 if new_inferences_valid:
-                    result = self.backtrack(assignment, new_inferences)
+                    result = self._backtrack(assignment, new_inferences)
                     if result:
                         return result
             else:
                 if self.record_history:
-                    history_item = self.create_history_item(
+                    history_item = self._create_history_item(
                         assignment=assignment,
                         inferences=inferences,
                         current_variable=variable,
@@ -286,7 +283,7 @@ class BacktrackingSearch:
                 message += " No consistent assignment found."
             else:
                 message += " Backtracking..."
-            history_item = self.create_history_item(
+            history_item = self._create_history_item(
                 assignment=assignment,
                 inferences=inferences,
                 current_variable=variable,
@@ -297,7 +294,7 @@ class BacktrackingSearch:
         return None
 
     @staticmethod
-    def create_history_item(
+    def _create_history_item(
             current_variable: str = None,
             ordered_values: list = None,
             current_value = None,
@@ -316,15 +313,15 @@ class BacktrackingSearch:
         }
         return history_item
 
-    def complete_assignment(self, assignment: dict) -> bool:
-        for variable in self.csp.get_variables():
+    def _complete_assignment(self, assignment: dict) -> bool:
+        for variable in self.csp.variables:
             if variable not in assignment.keys():
                 return False
             if not assignment[variable]:
                 return False
         return True
 
-    def select_unassigned_variable(self, assignment: dict, inferences):
+    def _select_unassigned_variable(self, assignment: dict, inferences):
         if self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.MRV or\
                 self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DegreeHeuristic:
             # Minimum-remaining-values heuristic
@@ -336,11 +333,11 @@ class BacktrackingSearch:
             minimum_remaining_values = math.inf
             maximum_num_constraints = 0
             chosen_variable = None
-            for variable in self.csp.get_variables():
+            for variable in self.csp.variables:
                 if variable not in assignment.keys():
                     if len(inferences[variable]) < minimum_remaining_values:
                         if self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DegreeHeuristic:
-                            maximum_num_constraints = self.get_num_constraints_with_unassigned_neighbors(assignment, variable)
+                            maximum_num_constraints = self._get_num_constraints_with_unassigned_neighbors(assignment, variable)
                         minimum_remaining_values = len(inferences[variable])
                         chosen_variable = variable
                     elif len(inferences[variable]) == minimum_remaining_values:
@@ -348,7 +345,7 @@ class BacktrackingSearch:
                             # Degree heuristic
                             # Select variable with largest number of constraints on other unassigned variables as
                             # tie-breaker for MRV.
-                            num_constraints = self.get_num_constraints_with_unassigned_neighbors(assignment, variable)
+                            num_constraints = self._get_num_constraints_with_unassigned_neighbors(assignment, variable)
                             if num_constraints > maximum_num_constraints:
                                 maximum_num_constraints = num_constraints
                                 minimum_remaining_values = len(inferences[variable])
@@ -356,18 +353,18 @@ class BacktrackingSearch:
             return chosen_variable
         else:
             # Naively select "next" variable
-            for variable in self.csp.get_variables():
+            for variable in self.csp.variables:
                 if variable not in assignment.keys():
                     return variable
 
-    def get_num_constraints_with_unassigned_neighbors(self, assignment: dict, variable):
+    def _get_num_constraints_with_unassigned_neighbors(self, assignment: dict, variable):
         maximum_num_constraints = 0
         for neighbor in self.csp.get_neighbors(variable):
             if neighbor not in assignment.keys():
                 maximum_num_constraints += len(self.csp.get_constraints(variable, neighbor))
         return maximum_num_constraints
 
-    def order_domain_values(self, variable, assignment: dict, inferences):
+    def _order_domain_values(self, variable, assignment: dict, inferences):
         if self.order_domain_values_heuristic == OrderDomainValuesHeuristics.LCV:
             # Least-constraining-value heuristic
             # Prefer value that rules out the fewest choices for neighbors
@@ -377,7 +374,7 @@ class BacktrackingSearch:
             else:
                 values_to_check = self.csp.get_domain(variable)
             for value in values_to_check:
-                domains = self.inference(variable, value, InferenceFunctions.ForwardChecking, inferences)
+                domains = self._inference(variable, value, InferenceFunctions.ForwardChecking, inferences)
                 total_num_values = 0
                 for neighbor in self.csp.get_neighbors(variable):
                     total_num_values += len(domains[neighbor])
@@ -393,7 +390,7 @@ class BacktrackingSearch:
             else:
                 return self.csp.get_domain(variable)
 
-    def is_consistent(self, variable, value, assignment):
+    def _is_consistent(self, variable, value, assignment):
         # Check if the value violates any of the constraints with already-assigned neighbors
         for neighbor in self.csp.get_neighbors(variable):
             if neighbor in assignment.keys():
@@ -403,7 +400,7 @@ class BacktrackingSearch:
         return True
 
     # Allow passing in the inference function instead of checking class variable so that this can be re-used
-    def inference(self, variable, value, inference_function=None, inferences=None):
+    def _inference(self, variable, value, inference_function=None, inferences=None):
         if inference_function == InferenceFunctions.ForwardChecking:
             # Create a new copy where any values in neighbors' domains that violate constraints are removed.
             if inferences:
@@ -429,7 +426,7 @@ class BacktrackingSearch:
             return self.csp.get_all_domains()
 
     @staticmethod
-    def all_domains_have_values(domains: dict) -> bool:
+    def _all_domains_have_values(domains: dict) -> bool:
         for variable_name in domains.keys():
             if len(domains[variable_name]) == 0:
                 return False

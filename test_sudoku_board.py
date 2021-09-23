@@ -82,8 +82,8 @@ class TestSudokuBoard(unittest.TestCase):
         if size == 4:
             expected_num_constraints = 112
         actual_num_constraints = 0
-        for i in csp.constraints.keys():
-            actual_num_constraints += len(csp.constraints[i])
+        for i in csp._constraints.keys():
+            actual_num_constraints += len(csp._constraints[i])
         self.assertEqual(expected_num_constraints, actual_num_constraints)
 
     def test_generate_csp_with_blank_board(self):
