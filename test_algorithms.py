@@ -321,7 +321,7 @@ class TestAlgorithms(unittest.TestCase):
         # SudokuBoard class, which internally checks the validity of the puzzle.
         result_as_list = [result[var_name] for var_name in sorted(result)]
         filled_board = SudokuBoard(initial_values=result_as_list)
-        self.assertTrue(type(filled_board) is SudokuBoard)
+        self.assertTrue(isinstance(filled_board, SudokuBoard))
 
     def test_backtracking_with_DegreeHeuristic_LCV_on_unsolvable_sudoku_2(self):
         board = SudokuBoard(initial_values=self.sudoku_puzzle_no_solution)

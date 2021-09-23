@@ -248,7 +248,7 @@ class SudokuBoardInputView(SudokuBoardBaseView):
             for col in range(self.board_size):
                 entry = self.entries[row][col]
                 # Keep value blank if 0
-                if type(values) is str:
+                if isinstance(values, str):
                     value = values[row*self.board_size + col] if values[row*self.board_size + col] != '0' else ''
                 else:
                     # values is a 1D list of digits
@@ -787,7 +787,7 @@ class SudokuCSPSolver:
                 self.board_views[view].grid_remove()
         # Only show the options panel
         for panel in self.main_panel:
-            if type(self.main_panel[panel]) is not OptionsPanelView:
+            if not isinstance(self.main_panel[panel], OptionsPanelView):
                 self.main_panel[panel].grid_remove()
         self.entry_disabled = False
         # Fill out cells with initial values if applicable
@@ -963,7 +963,7 @@ class SudokuCSPSolver:
         """Convert a result dictionary to a string for easy parsing."""
         result_list = []
         for var_name in sorted(result):
-            digit = result[var_name][0] if type(result[var_name]) is list else result[var_name]
+            digit = result[var_name][0] if isinstance(result[var_name], list) else result[var_name]
             result_list.append(str(digit))
         result_string = ''.join(result_list)
         return result_string
@@ -1026,7 +1026,7 @@ class SudokuCSPSolver:
 
     def change_panel(self, panel_type: type):
         for panel in self.main_panel:
-            if type(self.main_panel[panel]) is not panel_type:
+            if not isinstance(self.main_panel[panel], panel_type):
                 self.main_panel[panel].grid_remove()
             else:
                 self.main_panel[panel].grid()

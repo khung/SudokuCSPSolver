@@ -137,7 +137,8 @@ class AC3:
                     history_item[AC3HistoryItems.MESSAGE] = "Updated domains and queue."
                     self.history.append(history_item)
         # Update the message of the last step to include the fact that the algorithm has stopped.
-        self.history[-1][AC3HistoryItems.MESSAGE] += " Search has completed."
+        if self.record_history:
+            self.history[-1][AC3HistoryItems.MESSAGE] += " Search has completed."
         return True
 
     def revise(self, first_var, second_var) -> bool:

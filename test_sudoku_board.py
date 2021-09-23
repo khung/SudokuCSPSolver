@@ -5,7 +5,7 @@ from sudoku_board import *
 class TestSudokuBoard(unittest.TestCase):
     def test_create_sudoku_empty(self):
         board = SudokuBoard()
-        self.assertTrue(type(board) is SudokuBoard)
+        self.assertTrue(isinstance(board, SudokuBoard))
         for i in range(9):
             for j in range(9):
                 self.assertIsNone(board.get_cell_value(i, j))
