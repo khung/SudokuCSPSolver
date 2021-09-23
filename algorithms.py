@@ -157,7 +157,7 @@ class AC3:
 class SelectUnassignedVariableHeuristics(Enum):
     none = auto()
     MRV = auto()
-    DegreeHeuristic = auto()
+    DEGREE_HEURISTIC = auto()
 
 
 class OrderDomainValuesHeuristics(Enum):
@@ -167,7 +167,7 @@ class OrderDomainValuesHeuristics(Enum):
 
 class InferenceFunctions(Enum):
     none = auto()
-    ForwardChecking = auto()
+    FORWARD_CHECKING = auto()
 
 
 class BacktrackingSearchHistoryItems(Enum):
@@ -323,7 +323,7 @@ class BacktrackingSearch:
 
     def _select_unassigned_variable(self, assignment: dict, inferences):
         if self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.MRV or\
-                self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DegreeHeuristic:
+                self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DEGREE_HEURISTIC:
             # Minimum-remaining-values heuristic
             # Select the variable with the fewest number of possible values
             if not inferences:
@@ -336,12 +336,12 @@ class BacktrackingSearch:
             for variable in self.csp.variables:
                 if variable not in assignment.keys():
                     if len(inferences[variable]) < minimum_remaining_values:
-                        if self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DegreeHeuristic:
+                        if self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DEGREE_HEURISTIC:
                             maximum_num_constraints = self._get_num_constraints_with_unassigned_neighbors(assignment, variable)
                         minimum_remaining_values = len(inferences[variable])
                         chosen_variable = variable
                     elif len(inferences[variable]) == minimum_remaining_values:
-                        if self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DegreeHeuristic:
+                        if self.select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.DEGREE_HEURISTIC:
                             # Degree heuristic
                             # Select variable with largest number of constraints on other unassigned variables as
                             # tie-breaker for MRV.
@@ -374,7 +374,7 @@ class BacktrackingSearch:
             else:
                 values_to_check = self.csp.get_domain(variable)
             for value in values_to_check:
-                domains = self._inference(variable, value, InferenceFunctions.ForwardChecking, inferences)
+                domains = self._inference(variable, value, InferenceFunctions.FORWARD_CHECKING, inferences)
                 total_num_values = 0
                 for neighbor in self.csp.get_neighbors(variable):
                     total_num_values += len(domains[neighbor])
@@ -401,7 +401,7 @@ class BacktrackingSearch:
 
     # Allow passing in the inference function instead of checking class variable so that this can be re-used
     def _inference(self, variable, value, inference_function=None, inferences=None):
-        if inference_function == InferenceFunctions.ForwardChecking:
+        if inference_function == InferenceFunctions.FORWARD_CHECKING:
             # Create a new copy where any values in neighbors' domains that violate constraints are removed.
             if inferences:
                 # If we've already done inferencing, use the existing inferences

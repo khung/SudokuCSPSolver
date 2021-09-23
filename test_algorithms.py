@@ -184,7 +184,7 @@ class TestAlgorithms(unittest.TestCase):
         )
         board = SudokuBoard(initial_values=self.sudoku_puzzle_4x4_solvable, size=sudoku_size)
         csp = board.generate_csp()
-        backtracking_runner = BacktrackingSearch(csp, inference_function=InferenceFunctions.ForwardChecking)
+        backtracking_runner = BacktrackingSearch(csp, inference_function=InferenceFunctions.FORWARD_CHECKING)
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
 
@@ -213,7 +213,7 @@ class TestAlgorithms(unittest.TestCase):
         backtracking_runner = BacktrackingSearch(
             csp,
             select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.MRV,
-            inference_function=InferenceFunctions.ForwardChecking
+            inference_function=InferenceFunctions.FORWARD_CHECKING
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
@@ -230,7 +230,7 @@ class TestAlgorithms(unittest.TestCase):
         backtracking_runner = BacktrackingSearch(
             csp,
             select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.MRV,
-            inference_function=InferenceFunctions.ForwardChecking
+            inference_function=InferenceFunctions.FORWARD_CHECKING
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
@@ -246,8 +246,8 @@ class TestAlgorithms(unittest.TestCase):
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
             csp,
-            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
-            inference_function=InferenceFunctions.ForwardChecking
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DEGREE_HEURISTIC,
+            inference_function=InferenceFunctions.FORWARD_CHECKING
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
@@ -263,8 +263,8 @@ class TestAlgorithms(unittest.TestCase):
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
             csp,
-            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
-            inference_function=InferenceFunctions.ForwardChecking
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DEGREE_HEURISTIC,
+            inference_function=InferenceFunctions.FORWARD_CHECKING
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
@@ -280,9 +280,9 @@ class TestAlgorithms(unittest.TestCase):
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
             csp,
-            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DEGREE_HEURISTIC,
             order_domain_values_heuristic=OrderDomainValuesHeuristics.LCV,
-            inference_function=InferenceFunctions.ForwardChecking
+            inference_function=InferenceFunctions.FORWARD_CHECKING
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
@@ -298,9 +298,9 @@ class TestAlgorithms(unittest.TestCase):
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
             csp,
-            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DEGREE_HEURISTIC,
             order_domain_values_heuristic=OrderDomainValuesHeuristics.LCV,
-            inference_function=InferenceFunctions.ForwardChecking
+            inference_function=InferenceFunctions.FORWARD_CHECKING
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
@@ -311,9 +311,9 @@ class TestAlgorithms(unittest.TestCase):
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
             csp,
-            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DEGREE_HEURISTIC,
             order_domain_values_heuristic=OrderDomainValuesHeuristics.LCV,
-            inference_function=InferenceFunctions.ForwardChecking
+            inference_function=InferenceFunctions.FORWARD_CHECKING
         )
         result = backtracking_runner.run()
         self.assertIsNotNone(result)
@@ -328,9 +328,9 @@ class TestAlgorithms(unittest.TestCase):
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
             csp,
-            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DEGREE_HEURISTIC,
             order_domain_values_heuristic=OrderDomainValuesHeuristics.LCV,
-            inference_function=InferenceFunctions.ForwardChecking
+            inference_function=InferenceFunctions.FORWARD_CHECKING
         )
         result = backtracking_runner.run()
         self.assertIsNone(result)
@@ -388,7 +388,7 @@ class TestAlgorithms(unittest.TestCase):
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
             csp,
-            inference_function=InferenceFunctions.ForwardChecking,
+            inference_function=InferenceFunctions.FORWARD_CHECKING,
             record_history=True
         )
         result = backtracking_runner.run()
@@ -425,7 +425,7 @@ class TestAlgorithms(unittest.TestCase):
         backtracking_runner = BacktrackingSearch(
             csp,
             select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.MRV,
-            inference_function=InferenceFunctions.ForwardChecking,
+            inference_function=InferenceFunctions.FORWARD_CHECKING,
             record_history=True
         )
         result = backtracking_runner.run()
@@ -444,7 +444,7 @@ class TestAlgorithms(unittest.TestCase):
         backtracking_runner = BacktrackingSearch(
             csp,
             select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.MRV,
-            inference_function=InferenceFunctions.ForwardChecking,
+            inference_function=InferenceFunctions.FORWARD_CHECKING,
             record_history=True
         )
         result = backtracking_runner.run()
@@ -462,8 +462,8 @@ class TestAlgorithms(unittest.TestCase):
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
             csp,
-            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
-            inference_function=InferenceFunctions.ForwardChecking,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DEGREE_HEURISTIC,
+            inference_function=InferenceFunctions.FORWARD_CHECKING,
             record_history=True
         )
         result = backtracking_runner.run()
@@ -481,8 +481,8 @@ class TestAlgorithms(unittest.TestCase):
         csp = board.generate_csp()
         backtracking_runner = BacktrackingSearch(
             csp,
-            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DegreeHeuristic,
-            inference_function=InferenceFunctions.ForwardChecking,
+            select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.DEGREE_HEURISTIC,
+            inference_function=InferenceFunctions.FORWARD_CHECKING,
             record_history=True
         )
         result = backtracking_runner.run()
@@ -502,7 +502,7 @@ class TestAlgorithms(unittest.TestCase):
             csp,
             order_domain_values_heuristic=OrderDomainValuesHeuristics.LCV,
             select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.MRV,
-            inference_function=InferenceFunctions.ForwardChecking,
+            inference_function=InferenceFunctions.FORWARD_CHECKING,
             record_history=True
         )
         result = backtracking_runner.run()
@@ -522,7 +522,7 @@ class TestAlgorithms(unittest.TestCase):
             csp,
             order_domain_values_heuristic=OrderDomainValuesHeuristics.LCV,
             select_unassigned_variable_heuristic=SelectUnassignedVariableHeuristics.MRV,
-            inference_function=InferenceFunctions.ForwardChecking,
+            inference_function=InferenceFunctions.FORWARD_CHECKING,
             record_history=True
         )
         result = backtracking_runner.run()

@@ -915,11 +915,11 @@ class SudokuCSPSolver:
             if self._main_panel['options_panel'].is_algorithm_option_selected('MRV'):
                 suv_heuristic = SelectUnassignedVariableHeuristics.MRV
             if self._main_panel['options_panel'].is_algorithm_option_selected('Degree'):
-                suv_heuristic = SelectUnassignedVariableHeuristics.DegreeHeuristic
+                suv_heuristic = SelectUnassignedVariableHeuristics.DEGREE_HEURISTIC
             if self._main_panel['options_panel'].is_algorithm_option_selected('LCV'):
                 odv_heuristic = OrderDomainValuesHeuristics.LCV
             if self._main_panel['options_panel'].is_algorithm_option_selected('ForwardChecking'):
-                inference_fn = InferenceFunctions.ForwardChecking
+                inference_fn = InferenceFunctions.FORWARD_CHECKING
             algorithm_runner = BacktrackingSearch(
                 csp=self.csp,
                 select_unassigned_variable_heuristic=suv_heuristic,
