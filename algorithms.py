@@ -7,13 +7,35 @@ from typing import Optional, Any
 
 
 class AlgorithmTypes(IntEnum):
+    """CSP algorithm types."""
     AC3 = auto()
     BACKTRACKING_SEARCH = auto()
 
 
-# Define what a constraint satisfaction problem should consist of
 class ConstraintSatisfactionProblem:
+    """
+    Defines what a constraint satisfaction problem (CSP) should consist of so that a CSP algorithm can use it.
+
+    Public methods
+    --------------
+    * get_neighbors
+    * get_domain
+    * get_all_domains
+    * get_constraints
+    * delete_from_domain
+
+    Instance variables
+    ------------------
+    * variables
+    """
+
     def __init__(self, variables: list, domains: list, constraints: list) -> None:
+        """
+        :param variables: A list of variables in the CSP, where the variable is any hashable type (usually a string).
+        :param domains: A list of domains for each variable, in the same order as variables.
+        :param constraints: A list of constraints in the form (variable_1, variable_2, constraint_function) where
+        the constraint function returns true if the constraint is satisfied.
+        """
         if len(variables) != len(domains):
             raise ValueError("Number of domains must match number of variables")
         self.variables = variables
@@ -21,8 +43,6 @@ class ConstraintSatisfactionProblem:
         for i in range(len(variables)):
             self._domains[variables[i]] = domains[i]
         # Create dictionary of dictionaries for fast constraint lookup
-        # Assumes constraints are in the form (variable 1, variable 2, constraint function) where the constraint
-        # function returns true if constraint is satisfied.
         self._constraints = {}
         for first_var, second_var, constraint_func in constraints:
             # AC-3 seems to assume symmetric constraints, so we add both ways
@@ -46,22 +66,53 @@ class ConstraintSatisfactionProblem:
             self._neighbors[key] = self._constraints[key].keys()
 
     def get_neighbors(self, variable) -> collections.KeysView:
+        """
+        Get all the neighbors of a variable.
+
+        :param variable: A hashable object (usually a string) used to look up the variable's neighbors.
+        :return: The neighbors of that variable.
+        """
         return self._neighbors[variable]
 
     def get_domain(self, variable) -> list:
+        """
+        Get the domain (possible values) of a variable.
+
+        :param variable: A hashable object (usually a string) used to look up the variable's domain.
+        :return: The domain of that variable.
+        """
         return self._domains[variable]
 
     def get_all_domains(self) -> dict:
+        """
+        Get all domains in this CSP.
+
+        :return: A dictionary of all domains.
+        """
         return self._domains
 
     def get_constraints(self, first_var, second_var) -> list:
+        """
+        Get all constraints between two variables.
+
+        :param first_var: A hashable object (usually a string) representing the first variable.
+        :param second_var: A hashable object (usually a string) representing the second variable.
+        :return: All constraints between the two variables.
+        """
         return self._constraints[first_var][second_var]
 
     def delete_from_domain(self, variable, value) -> None:
+        """
+        Delete a value from a domain.
+
+        :param variable: A hashable object (usually a string) representing a variable.
+        :param value: The value to delete from the domain.
+        """
         self._domains[variable].remove(value)
 
 
 class AC3HistoryItems(Enum):
+    """Possible items that can be stored in a step in the history of a run of the AC-3 algorithm."""
     CURRENT_ARC = auto()
     CURRENT_QUEUE = auto()
     DOMAINS = auto()
@@ -69,7 +120,27 @@ class AC3HistoryItems(Enum):
 
 
 class AC3:
+    """
+    Class for running the AC-3 algorithm.
+
+    Public methods
+    --------------
+    * run
+
+    Instance variables
+    ------------------
+    * csp
+    * solution
+    * is_consistent
+    * record_history
+    * history
+    """
+
     def __init__(self, csp: ConstraintSatisfactionProblem, record_history: bool = False) -> None:
+        """
+        :param csp: A CSP containing the problem to solve.
+        :param record_history: Whether to record the history of a run.
+        """
         self.csp = csp
         self.solution = None
         self.is_consistent = False
@@ -77,6 +148,12 @@ class AC3:
         self.history = []
 
     def run(self) -> Optional[dict]:
+        """
+        The main entry point for running the AC-3 algorithm.
+
+        :return: A dictionary of the remaining domains of each variable after the run. If no consistent assignment can
+        be found (i.e. the domain of a variable became empty), None is returned.
+        """
         self.is_consistent = self._run_algorithm()
         if self.is_consistent:
             self.solution = {}
@@ -85,8 +162,8 @@ class AC3:
                 self.solution[variable] = self.csp.get_domain(variable)
         return self.solution
 
-    # Based on AC-3 pseudo-code from AIMA 3rd ed. Chapter 6
     def _run_algorithm(self) -> bool:
+        """The implementation of the AC-3 algorithm. Based on AC-3 pseudo-code from AIMA 3rd ed. Chapter 6."""
         # Add all variable pairs as arcs. Arcs A->B and B->A should both be added so that the values in A and B can be
         # tested against each other.
         queue = []
@@ -157,22 +234,26 @@ class AC3:
 
 
 class SelectUnassignedVariableHeuristics(Enum):
+    """All implemented Select-Unassigned-Variable heuristics."""
     none = auto()
     MRV = auto()
     DEGREE_HEURISTIC = auto()
 
 
 class OrderDomainValuesHeuristics(Enum):
+    """All implemented Order-Domain-Values heuristics."""
     none = auto()
     LCV = auto()
 
 
 class InferenceFunctions(Enum):
+    """All implemented inference functions."""
     none = auto()
     FORWARD_CHECKING = auto()
 
 
 class BacktrackingSearchHistoryItems(Enum):
+    """Possible items that can be stored in a step in the history of a run of the backtracking search algorithm."""
     CURRENT_VARIABLE = auto()
     ORDERED_VALUES = auto()
     CURRENT_VALUE = auto()
@@ -182,6 +263,23 @@ class BacktrackingSearchHistoryItems(Enum):
 
 
 class BacktrackingSearch:
+    """
+    Class for running the backtracking search algorithm.
+
+    Public methods
+    --------------
+    * run
+
+    Instance variables
+    ------------------
+    * csp
+    * select_unassigned_variable_heuristic
+    * order_domain_values_heuristic
+    * inference_function
+    * solution
+    * record_history
+    * history
+    """
     def __init__(
             self,
             csp: ConstraintSatisfactionProblem,
@@ -191,6 +289,13 @@ class BacktrackingSearch:
             inference_function: InferenceFunctions = InferenceFunctions.none,
             record_history: bool = False
     ) -> None:
+        """
+        :param csp: A CSP containing the problem to solve.
+        :param select_unassigned_variable_heuristic: The Select-Unassigned-Variable heuristic to use.
+        :param order_domain_values_heuristic: The Order-Domain-Values heuristic to use.
+        :param inference_function: The inference function to use.
+        :param record_history: Whether to record the history of a run.
+        """
         self.csp = csp
         self.select_unassigned_variable_heuristic = None
         self.order_domain_values_heuristic = None
@@ -215,11 +320,18 @@ class BacktrackingSearch:
         self.history = []
 
     def run(self) -> Optional[dict]:
+        """
+        The main entry point for running the backtracking search algorithm.
+
+        :return: A dictionary of the complete assignment after the run. If no complete assignment can be found, None
+        is returned.
+        """
         self.solution = self._run_algorithm()
         return self.solution
 
-    # Based on Backtracking-Search pseudo-code from AIMA 3rd ed. Chapter 6
     def _run_algorithm(self) -> Optional[dict]:
+        """The implementation of the backtracking search algorithm. Based on Backtracking-Search pseudo-code from AIMA
+        3rd ed. Chapter 6."""
         return self._backtrack({}, None)
 
     def _backtrack(self, assignment: dict, inferences: Optional[dict]) -> Optional[dict]:
@@ -402,7 +514,6 @@ class BacktrackingSearch:
                         return False
         return True
 
-    # Allow passing in the inference function instead of checking class variable so that this can be re-used
     def _inference(
             self,
             variable,

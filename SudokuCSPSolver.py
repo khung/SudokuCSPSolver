@@ -12,7 +12,13 @@ from typing import Union, Callable
 
 
 class Cell(Entry):
+    """Extends the Entry widget to provide a cell for the Sudoku board."""
+
     def __init__(self, max_digit: int, master=None) -> None:
+        """
+        :param max_digit: The maximum digit to accept as input [1, max_digit].
+        :param master: The parent Tk container.
+        """
         super().__init__(
             master,
             width=1,
@@ -26,7 +32,12 @@ class Cell(Entry):
         self._max_digit = max_digit
 
     def _on_validate(self, new_value: str) -> bool:
-        """Validate that the input is a digit between 1 and the board size (4 or 9)."""
+        """
+        Validate that the input is a digit between 1 and the board size (4 or 9).
+
+        :param new_value: The new value that was entered as input.
+        :return: Whether the input is valid.
+        """
         if new_value == "":
             return True
         try:
@@ -40,7 +51,18 @@ class Cell(Entry):
 
 
 class SolverCell(Frame):
-    """Class that draws each cell in the solving phase."""
+    """
+    Extends Frame container to draw each cell in the solving mode.
+
+    Public methods
+    --------------
+    * update_domain
+    * select_cell
+    * unselect_cell
+    * select_value
+    * unselect_value
+    """
+
     # Style names
     unselected_cell_frame = 'Cell.TFrame'
     selected_cell_frame = 'SelectedCell.TFrame'
@@ -52,6 +74,10 @@ class SolverCell(Frame):
     selected_cell_highlighted_value_2_label = 'SelectedCell_HighlightValue2.TLabel'
 
     def __init__(self, max_digit: int, master=None, **kw) -> None:
+        """
+        :param max_digit: The maximum digit in the domain of the cell (variable).
+        :param master: The parent Tk container.
+        """
         super().__init__(master, **kw)
         # Backgrounds need to be set for both frame and label for full coverage.
         s = Style()
@@ -65,10 +91,10 @@ class SolverCell(Frame):
         s.configure(self.selected_cell_label, background='light yellow', foreground='black')
         s.configure(self.selected_cell_highlighted_value_1_label, background='light yellow', foreground='red')
         s.configure(self.selected_cell_highlighted_value_2_label, background='light yellow', foreground='blue')
-        self.max_digit = max_digit
+        self._max_digit = max_digit
         self._domain = self._make_gui()
         # Flag to specify whether this cell is currently selected
-        self.selected = False
+        self._selected = False
         # Set to unselected by default
         self.unselect_cell()
 
@@ -76,11 +102,11 @@ class SolverCell(Frame):
         domain = []
         digit = 1
         # Positioning is not ideal (horizontal spacing is a bit too narrow), but this seems to be the best Tk can do.
-        if self.max_digit == 9:
+        if self._max_digit == 9:
             range_end = 3
             font = "Helvetica 7"
             x_padding = 2
-        elif self.max_digit == 4:
+        elif self._max_digit == 4:
             range_end = 2
             font = "Helvetica 13"
             x_padding = 2
@@ -109,7 +135,12 @@ class SolverCell(Frame):
         return domain
 
     def update_domain(self, new_domain: list) -> None:
-        for digit_index in range(self.max_digit):
+        """
+        Update the domains in the cell.
+
+        :param new_domain: The list of new domain values.
+        """
+        for digit_index in range(self._max_digit):
             digit = digit_index+1
             if digit in new_domain:
                 # Make sure that the digit is shown if it's in the new domain
@@ -119,7 +150,8 @@ class SolverCell(Frame):
                 self._domain[digit_index].configure(text=" ")
 
     def select_cell(self) -> None:
-        self.selected = True
+        """Highlight this cell."""
+        self._selected = True
         self.configure(style=self.selected_cell_frame)
         for value_label in self._domain:
             old_style = value_label.cget('style')
@@ -135,7 +167,8 @@ class SolverCell(Frame):
             value_label.configure(style=new_style)
 
     def unselect_cell(self) -> None:
-        self.selected = False
+        """Un-highlight this cell."""
+        self._selected = False
         self.configure(style=self.unselected_cell_frame)
         for value_label in self._domain:
             old_style = value_label.cget('style')
@@ -151,9 +184,15 @@ class SolverCell(Frame):
             value_label.configure(style=new_style)
 
     def select_value(self, value: int, highlight_type: int) -> None:
+        """
+        Highlight the specified value in this cell.
+
+        :param value: The value to highlight.
+        :param highlight_type: The type of highlighting to do. The color will depend on the type.
+        """
         if highlight_type != 1 and highlight_type != 2:
             raise ValueError("Invalid highlight_type value")
-        if self.selected:
+        if self._selected:
             if highlight_type == 1:
                 new_style = self.selected_cell_highlighted_value_1_label
             else:
@@ -166,7 +205,12 @@ class SolverCell(Frame):
         self._domain[value - 1].configure(style=new_style)
 
     def unselect_value(self, value: int) -> None:
-        if self.selected:
+        """
+        Un-highlight the specified value in this cell.
+
+        :param value: The value to stop highlighting.
+        """
+        if self._selected:
             new_style = self.selected_cell_label
         else:
             new_style = self.unselected_cell_label
@@ -174,17 +218,29 @@ class SolverCell(Frame):
 
 
 class AppMode(Enum):
+    """The different modes that the application can be in."""
     INPUT = auto()
     SOLVE = auto()
 
 
 class SudokuBoardBaseView(Frame):
+    """
+    The base class for SudokuBoardInputView and SudokuBoardSolverView. Extends Tk's Frame container.
+
+    Public variables
+    ----------------
+    * board_size
+    """
+
     def __init__(self, board_size: int, master=None, **kw) -> None:
+        """
+        :param board_size: The size of the board (9 or 4).
+        :param master: The parent Tk container.
+        """
         super().__init__(master, **kw)
         self.board_size = board_size
 
     def _make_gui(self, is_solver: bool) -> (list, dict):
-        """Create the tk GUI elements using grid geometry manager and images of separators."""
         entries = []
         # These need to be instance variables so that mainloop will be able to reference the images when rendering
         images = {
@@ -239,12 +295,32 @@ class SudokuBoardBaseView(Frame):
 
 
 class SudokuBoardInputView(SudokuBoardBaseView):
+    """
+    Extends SudokuBoardBaseView to provide the view during the input mode.
+
+    Public methods
+    --------------
+    * set_board
+    * reset_board
+    * clear_board
+    * get_board
+    """
+
     def __init__(self, board_size: int, master=None, **kw) -> None:
+        """
+        :param board_size: The size of the board (9 or 4).
+        :param master: The parent Tk container.
+        """
         super().__init__(board_size, master, **kw)
         self._entries, self._images = self._make_gui(is_solver=False)
 
     def set_board(self, values: Union[str, list], entry_disabled: bool) -> None:
-        """Tk commands to set the board."""
+        """
+        Set the board given the provided values.
+
+        :param values: A string or a list of integers to set the board.
+        :param entry_disabled: Whether input should be disabled afterwards.
+        """
         for row in range(self.board_size):
             for col in range(self.board_size):
                 entry = self._entries[row][col]
@@ -262,14 +338,23 @@ class SudokuBoardInputView(SudokuBoardBaseView):
                     entry.configure(state=DISABLED)
 
     def reset_board(self, puzzle: Union[str, list]) -> None:
-        """Reset the board UI elements."""
+        """
+        Reset the board to the provided puzzle.
+
+        :param puzzle: A string or a list of integers to reset the board to.
+        """
         self.set_board(values=puzzle, entry_disabled=False)
 
     def clear_board(self) -> None:
-        """Clear board UI elements."""
+        """Clear the board."""
         self.set_board(values='0'*self.board_size*self.board_size, entry_disabled=False)
 
     def get_board(self) -> list:
+        """
+        Get the current board.
+
+        :return: The list of values in row-major order.
+        """
         puzzle_as_list = []
         for row in range(self.board_size):
             for col in range(self.board_size):
@@ -280,12 +365,32 @@ class SudokuBoardInputView(SudokuBoardBaseView):
 
 
 class SudokuBoardSolverView(SudokuBoardBaseView):
+    """
+    Extends SudokuBoardBaseView to provide the view during the solve mode.
+
+    Public methods
+    --------------
+    * set_domains
+    * highlight_current_variables
+    * clear_all_highlighted_values
+    * highlight_value_in_variable
+    * reset_board
+    """
+
     def __init__(self, board_size: int, master=None, **kw) -> None:
+        """
+        :param board_size: The size of the board (9 or 4).
+        :param master: The parent tk container.
+        """
         super().__init__(board_size, master, **kw)
         self._entries, self._images = self._make_gui(is_solver=True)
 
-    def set_domains(self, domains: dict):
-        """Set the domain values for each cell."""
+    def set_domains(self, domains: dict) -> None:
+        """
+        Set the domain values for each cell.
+
+        :param domains: The domains for each variable.
+        """
         for row in range(self.board_size):
             for col in range(self.board_size):
                 variable_name = SudokuBoard.make_variable_name(row+1, col+1)
@@ -293,6 +398,11 @@ class SudokuBoardSolverView(SudokuBoardBaseView):
                 entry.update_domain(domains[variable_name])
 
     def highlight_current_variables(self, variables: list) -> None:
+        """
+        Highlight the specified variables.
+
+        :param variables: The variables to highlight.
+        """
         for row in range(self.board_size):
             for col in range(self.board_size):
                 self._entries[row][col].unselect_cell()
@@ -302,17 +412,29 @@ class SudokuBoardSolverView(SudokuBoardBaseView):
             self._entries[row - 1][col - 1].select_cell()
 
     def clear_all_highlighted_values(self) -> None:
+        """Un-highlight all values in all cells."""
         for row in range(self.board_size):
             for col in range(self.board_size):
                 for default_value in range(self.board_size):
                     self._entries[row][col].unselect_value(default_value)
 
     def highlight_value_in_variable(self, variable: str, value: int, highlight_type: int) -> None:
+        """
+        Highlight specified value in specified variable.
+
+        :param variable: The variable to look at.
+        :param value: The value to highlight.
+        :param highlight_type: The type of highlighting to do. The color will depend on the type.
+        """
         row, col = SudokuBoard.get_row_col_from_variable_name(variable)
         self._entries[row - 1][col - 1].select_value(value, highlight_type)
 
     def reset_board(self, puzzle: list) -> None:
-        """Set all domains to puzzle default and clear all selected cells/values"""
+        """
+        Set all domains to puzzle default and clear all selected cells/values.
+
+        :param puzzle: The puzzle to reset the board to.
+        """
         default_domain = [i+1 for i in range(self.board_size)]
         for row in range(self.board_size):
             for col in range(self.board_size):
@@ -327,7 +449,21 @@ class SudokuBoardSolverView(SudokuBoardBaseView):
 
 
 class OptionsPanelView(Frame):
+    """
+    Extends Frame to provide an options panel.
+
+    Public methods
+    --------------
+    * get_algorithm_value
+    * is_algorithm_option_selected
+    """
+
     def __init__(self, board_size: int, change_board_size_fn: Callable, master=None, **kw) -> None:
+        """
+        :param board_size: The size of the board (9 or 4).
+        :param change_board_size_fn: The function to call when changing board size.
+        :param master: The parent Tk container.
+        """
         super().__init__(master, **kw)
         # A reference to the function is passed in so that the function call will not depend on the Tk hierarchy
         self.change_board_size_fn = change_board_size_fn
@@ -428,6 +564,7 @@ class OptionsPanelView(Frame):
         self.change_board_size_fn(self._board_size.get())
 
     def get_algorithm_value(self) -> int:
+        """Get the value of the algorithm selected."""
         return self._algorithm.get()
 
     def _update_algorithm_checkbuttons(self, button: str) -> None:
@@ -466,10 +603,17 @@ class OptionsPanelView(Frame):
                 self._algorithm_options['Degree'].set(0)
 
     def is_algorithm_option_selected(self, option: str) -> bool:
+        """
+        Get whether the specified option is selected.
+
+        :param option: The option to look up.
+        :return: Whether the option is selected.
+        """
         return self._algorithm_options[option].get() == 1
 
 
 class StepControlButtons(Enum):
+    """Possible buttons for the step controls."""
     FIRST = auto()
     PREVIOUS = auto()
     NEXT = auto()
@@ -477,18 +621,21 @@ class StepControlButtons(Enum):
 
 
 class InfoPanelSectionTypes(Enum):
+    """Algorithm section types for the info panel."""
     none = auto()
     AC3 = auto()
     BACKTRACKING = auto()
 
 
 class InfoPanelSectionsAC3(Enum):
+    """Sections available for AC-3's info panel."""
     MESSAGE = auto()
     CURRENT_ARC = auto()
     CURRENT_QUEUE = auto()
 
 
 class InfoPanelSectionsBacktracking(Enum):
+    """Sections available for backtracking search's info panel."""
     MESSAGE = auto()
     CURRENT_ASSIGNMENT = auto()
     CURRENT_VARIABLE = auto()
@@ -497,7 +644,33 @@ class InfoPanelSectionsBacktracking(Enum):
 
 
 class InfoPanelView(Frame):
+    """
+    Extends Frame to provide an info panel.
+
+    Public methods
+    --------------
+    * set_current_step
+    * set_total_steps
+    * go_to_first_step
+    * go_to_previous_step
+    * go_to_next_step
+    * go_to_last_step
+    * set_step_controls
+    * set_section
+    * reset_panel
+    * change_section
+
+    Instance variables
+    ------------------
+    * current_step
+    * go_to_step_fn
+    """
+
     def __init__(self, go_to_step_fn: Callable, master=None, **kw) -> None:
+        """
+        :param go_to_step_fn: The function to call when going to a step.
+        :param master: The parent Tk container.
+        """
         super().__init__(master, **kw)
         # A reference to the function is passed in so that it can easily reference objects out of the current class's
         # scope.
@@ -650,26 +823,41 @@ class InfoPanelView(Frame):
         return current_step_entry, total_steps, step_controls, sections, images
 
     def set_current_step(self, step: int) -> None:
+        """
+        Set the current step.
+
+        :param step: The current step.
+        """
         self.current_step = step
         self._current_step_entry.delete('0', END)
         self._current_step_entry.insert(INSERT, str(step))
 
     def set_total_steps(self, num_steps: int) -> None:
+        """
+        Set the total number of steps.
+
+        :param num_steps: Total number of steps.
+        """
         self._total_steps.configure(text=str(num_steps))
 
     def go_to_first_step(self) -> None:
+        """Go to the first step."""
         self.go_to_step_fn('1')
 
     def go_to_previous_step(self) -> None:
+        """Go to the previous step."""
         self.go_to_step_fn(str(self.current_step - 1))
 
     def go_to_next_step(self) -> None:
+        """Go to the next step."""
         self.go_to_step_fn(str(self.current_step + 1))
 
     def go_to_last_step(self) -> None:
+        """Go to the last step."""
         self.go_to_step_fn(self._total_steps.cget('text'))
 
     def set_step_controls(self) -> None:
+        """Set the step controls in accordance with the current step."""
         # Make sure that controls are set correctly
         total_steps = int(self._total_steps.cget('text'))
         if total_steps <= 1:
@@ -694,6 +882,12 @@ class InfoPanelView(Frame):
             self._step_controls[StepControlButtons.LAST].state(['!disabled', '!focus'])
 
     def set_section(self, section: Union[InfoPanelSectionsAC3, InfoPanelSectionsBacktracking], obj) -> None:
+        """
+        Set the information to display on the info panel.
+
+        :param section: The section to update.
+        :param obj: The information used for the update.
+        """
         if self._visible_section is InfoPanelSectionTypes.AC3:
             if section is InfoPanelSectionsAC3.MESSAGE:
                 obj_string = obj if obj is not None else ""
@@ -744,6 +938,7 @@ class InfoPanelView(Frame):
                 self._sections[section].configure(text=obj_string)
 
     def reset_panel(self) -> None:
+        """Reset state of all widgets in the info panel."""
         self.current_step = 1
         self._current_step_entry.delete('0', END)
         self.set_total_steps(0)
@@ -758,6 +953,11 @@ class InfoPanelView(Frame):
             pass
 
     def change_section(self, section: InfoPanelSectionTypes) -> None:
+        """
+        Change the algorithm section.
+
+        :param section: The algorithm section to display.
+        """
         self._visible_section = section
         if section is InfoPanelSectionTypes.AC3:
             self._sections[InfoPanelSectionTypes.BACKTRACKING].pack_forget()
@@ -771,6 +971,36 @@ class InfoPanelView(Frame):
 
 
 class SudokuCSPSolver:
+    """
+    Main class for the application.
+
+    Public methods
+    --------------
+    * run
+    * solve
+    * puzzle_list_to_string
+    * result_dict_to_string
+    * reset
+    * clear
+    * reset_message
+    * set_message
+    * change_board_size
+    * set_controls
+    * change_board_type
+    * change_panel
+    * go_to_step
+    * validate_options
+
+    Instance variables
+    ------------------
+    * board_size
+    * entry_disabled
+    * puzzle
+    * history
+    * selected_algorithm
+    * csp
+    """
+
     def __init__(self) -> None:
         self.board_size = 9
         if len(sys.argv) == 2:
@@ -804,10 +1034,10 @@ class SudokuCSPSolver:
         self.csp = None
 
     def run(self) -> None:
+        """Main loop of application."""
         self._root.mainloop()
 
     def _make_gui(self) -> (Tk, dict, dict, Label, dict):
-        """Create the tk GUI."""
         # Set dimensions for the two main panels of the application, to allow showing/hiding widgets without changing
         # the size of the window.
         board_frame_height = 500
@@ -955,6 +1185,12 @@ class SudokuCSPSolver:
 
     @staticmethod
     def puzzle_list_to_string(puzzle: list) -> str:
+        """
+        Convert the puzzle from a list to a string.
+
+        :param puzzle: The puzzle as a list of integers.
+        :return: The puzzle as a string of integers.
+        """
         # Turn integers to strings if necessary
         temp_list = [str(puzzle[i]) for i in range(len(puzzle))]
         puzzle_string = ''.join(temp_list)
@@ -962,7 +1198,12 @@ class SudokuCSPSolver:
 
     @staticmethod
     def result_dict_to_string(result: dict) -> str:
-        """Convert a result dictionary to a string for easy parsing."""
+        """
+        Convert a result dictionary to a string.
+
+        :param result: The result as a dictionary.
+        :return: The result as a string.
+        """
         result_list = []
         for var_name in sorted(result):
             digit = result[var_name][0] if isinstance(result[var_name], list) else result[var_name]
@@ -971,7 +1212,7 @@ class SudokuCSPSolver:
         return result_string
 
     def reset(self) -> None:
-        """Reset Sudoku board from solved state to original state."""
+        """Reset the application from the solve mode to the input mode."""
         # Remove any existing messages
         self.reset_message()
         self._board_view.reset_board(self.puzzle)
@@ -981,7 +1222,7 @@ class SudokuCSPSolver:
         self.change_panel(OptionsPanelView)
 
     def clear(self) -> None:
-        """Clear all cells in the Sudoku puzzle."""
+        """Clear all cells of the Sudoku board."""
         # Remove any existing messages
         self.reset_message()
         self._board_view.clear_board()
@@ -991,11 +1232,21 @@ class SudokuCSPSolver:
         self._message.configure(foreground='black', text="")
 
     def set_message(self, text: str, error: bool = False) -> None:
-        """Set the message UI element."""
+        """
+        Set the message UI element.
+
+        :param text: The text to set.
+        :param error: Whether the message is an error.
+        """
         color = 'red' if error else 'black'
         self._message.configure(foreground=color, text=text)
 
     def change_board_size(self, size: int) -> None:
+        """
+        Change the size of the board.
+
+        :param size: The size of the board (9 or 4).
+        """
         # Hide current board
         self._board_view.grid_remove()
         # Show new board
@@ -1004,6 +1255,11 @@ class SudokuCSPSolver:
         self._board_view.grid()
 
     def set_controls(self, mode: AppMode) -> None:
+        """
+        Set the application's controls based on the mode.
+
+        :param mode: The current mode of the application.
+        """
         if mode == AppMode.SOLVE:
             self.entry_disabled = True
             # for row in self.board_view.entries:
@@ -1020,6 +1276,11 @@ class SudokuCSPSolver:
             self._buttons['clear_button'].state(['!disabled'])
 
     def change_board_type(self, mode: AppMode) -> None:
+        """
+        Change the type of the Sudoku board UI element based on the mode.
+
+        :param mode: The current mode of the application.
+        """
         # Hide current board
         self._board_view.grid_remove()
         # Show new board
@@ -1027,6 +1288,11 @@ class SudokuCSPSolver:
         self._board_view.grid()
 
     def change_panel(self, panel_type: type) -> None:
+        """
+        Change the main panel.
+
+        :param panel_type: The panel type to change to.
+        """
         for panel in self._main_panel:
             if not isinstance(self._main_panel[panel], panel_type):
                 self._main_panel[panel].grid_remove()
@@ -1034,6 +1300,11 @@ class SudokuCSPSolver:
                 self._main_panel[panel].grid()
 
     def go_to_step(self, step_string: str) -> None:
+        """
+        Go to the specified step in the algorithm run's history.
+
+        :param step_string: A string representation of the step to go to.
+        """
         # Clear message first
         self.reset_message()
         # Validate input
@@ -1115,6 +1386,11 @@ class SudokuCSPSolver:
             raise ValueError("No defined behavior for selected_algorithm value")
 
     def validate_options(self) -> bool:
+        """
+        Validate the algorithm options selected.
+
+        :return: Whether the options selected is a valid combination.
+        """
         # Use the raw Enum value so we can check if it's not in AlgorithmTypes
         selected_algorithm = self._main_panel['options_panel'].get_algorithm_value()
         if selected_algorithm != AlgorithmTypes.AC3 and selected_algorithm != AlgorithmTypes.BACKTRACKING_SEARCH:

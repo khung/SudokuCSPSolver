@@ -3,9 +3,31 @@ from typing import Optional
 
 
 class SudokuBoard:
+    """
+    A Sudoku board, either 9x9 or 4x4 in size.
+
+    Public methods
+    --------------
+    * set_cells
+    * to_list
+    * get_cell_value
+    * generate_csp
+    * make_variable_name
+    * get_row_col_from_variable_name
+
+    Instance variables
+    ------------------
+    * size
+    * board
+    """
     board_sizes = [4, 9]
 
     def __init__(self, initial_values: Optional[list] = None, size: int = 9) -> None:
+        """
+        :param initial_values: An optional list of initial values to populate the Sudoku board. 0 is used to indicate
+        an empty cell.
+        :param size: The size of the Sudoku board (9 or 4).
+        """
         if size not in SudokuBoard.board_sizes:
             raise ValueError("Invalid value for size")
         self.size = size
@@ -20,6 +42,11 @@ class SudokuBoard:
                 raise ValueError("initial_values contains an invalid Sudoku puzzle")
 
     def set_cells(self, values: list) -> None:
+        """
+        Set the values of all cells on the board.
+
+        :param values: The list of values to set.
+        """
         if len(values) != self.size*self.size:
             raise ValueError("initial_values must contain {} items".format(self.size*self.size))
         old_board = self.board.copy()
@@ -76,12 +103,24 @@ class SudokuBoard:
         return True
 
     def to_list(self) -> list:
+        """
+        Create a list of the board values.
+
+        :return: List of all board values in row-major order.
+        """
         result = []
         for i in range(self.size):
             result.extend(self.board[i])
         return result
 
     def get_cell_value(self, row: int, column: int) -> int:
+        """
+        Get the value of a cell.
+
+        :param row: The row of the cell.
+        :param column: The column of the cell.
+        :return: The value of the cell (None if empty).
+        """
         value = self.board[row][column]
         # Don't return 0 (empty cell)
         if value == 0:
@@ -89,6 +128,11 @@ class SudokuBoard:
         return value
 
     def generate_csp(self) -> ConstraintSatisfactionProblem:
+        """
+        Create a constraint satisfaction problem from the Sudoku board.
+
+        :return: The CSP of the Sudoku board.
+        """
         variables = []
         domains = []
         for i in range(self.size):
@@ -139,11 +183,24 @@ class SudokuBoard:
 
     @staticmethod
     def make_variable_name(i: int, j: int) -> str:
+        """
+        Create the name of the variable in position (i, j) where both i and j start at 1.
+
+        :param i: Row portion of the variable name.
+        :param j: Column portion of the variable name.
+        :return: The variable name at the specified position.
+        """
         # Starts from 1, 1
         return str(i) + '-' + str(j)
 
     @staticmethod
     def get_row_col_from_variable_name(variable_name: str) -> (int, int):
+        """
+        Get the row and column of the variable name given, starting at index 1.
+
+        :param variable_name: The variable name to look up.
+        :return: The row and column of the variable.
+        """
         # Starts from 1, 1
         strings = variable_name.split('-')
         return int(strings[0]), int(strings[1])
