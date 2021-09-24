@@ -1037,7 +1037,7 @@ class SudokuCSPSolver:
     * board_size
     * entry_disabled
     * puzzle
-    * history
+    * algorithm_runner
     * selected_algorithm
     * csp
     * solving
@@ -1071,8 +1071,8 @@ class SudokuCSPSolver:
             self._board_view.set_board(values=sys.argv[1], entry_disabled=self.entry_disabled)
         # Store the current puzzle
         self.puzzle = None
-        # Store history of solver
-        self.history = None
+        # Store the algorithm runner so we can access its methods/properties
+        self.algorithm_runner = None
         self.selected_algorithm = None
         # Keep CSP after it's generated to be able to access its properties from methods other than solve()
         self.csp = None
@@ -1176,7 +1176,7 @@ class SudokuCSPSolver:
         self.selected_algorithm = AlgorithmTypes(self._main_panel['options_panel'].get_algorithm_value())
         self.csp = board.generate_csp()
         if self.selected_algorithm == AlgorithmTypes.AC3:
-            algorithm_runner = AC3(self.csp, record_history=True)
+            self.algorithm_runner = AC3(self.csp, record_history=True)
         elif self.selected_algorithm == AlgorithmTypes.BACKTRACKING_SEARCH:
             suv_heuristic = SelectUnassignedVariableHeuristics.none
             odv_heuristic = OrderDomainValuesHeuristics.none
@@ -1189,7 +1189,7 @@ class SudokuCSPSolver:
                 odv_heuristic = OrderDomainValuesHeuristics.LCV
             if self._main_panel['options_panel'].is_algorithm_option_selected('ForwardChecking'):
                 inference_fn = InferenceFunctions.FORWARD_CHECKING
-            algorithm_runner = BacktrackingSearch(
+            self.algorithm_runner = BacktrackingSearch(
                 csp=self.csp,
                 select_unassigned_variable_heuristic=suv_heuristic,
                 order_domain_values_heuristic=odv_heuristic,
@@ -1199,14 +1199,12 @@ class SudokuCSPSolver:
         else:
             raise ValueError("Invalid value for algorithm")
         # Run the algorithm in another thread
-        _thread.start_new_thread(self._run_algorithm, (algorithm_runner,))
+        _thread.start_new_thread(self._run_algorithm, ())
         # Wait for the algorithm to finish
         self._root.after(ms=self.wait_time, func=self._wait_for_results)
 
-    def _run_algorithm(self, algorithm_runner: Union[AC3, BacktrackingSearch]) -> None:
-        self.algorithm_result = algorithm_runner.run()
-        # Store history in instance so it will be accessible to other methods
-        self.history = algorithm_runner.history
+    def _run_algorithm(self) -> None:
+        self.algorithm_result = self.algorithm_runner.run()
         self.solving = False
 
     def _wait_for_results(self):
@@ -1251,7 +1249,7 @@ class SudokuCSPSolver:
                         break
                 if partial_assignment:
                     self.set_message(text="AC3 algorithm returned a partial assignment.", error=True)
-            num_steps = len(self.history)
+            num_steps = self.algorithm_runner.get_history_length()
             self._main_panel['info_panel'].set_total_steps(num_steps)
             # Set first step in history
             self._main_panel['info_panel'].go_to_first_step()
@@ -1398,10 +1396,10 @@ class SudokuCSPSolver:
         except ValueError:
             self.set_message("Step is not valid.", error=True)
             return
-        if step <= 0 or step > len(self.history):
+        if step <= 0 or step > self.algorithm_runner.get_history_length():
             self.set_message("Step is not valid.", error=True)
             return
-        history_step = self.history[step-1]
+        history_step = self.algorithm_runner.get_history_step(step - 1)
         # Set info panel
         self._main_panel['info_panel'].set_current_step(step)
         self._main_panel['info_panel'].set_step_controls()

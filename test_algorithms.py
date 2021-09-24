@@ -347,7 +347,7 @@ class TestAlgorithms(unittest.TestCase):
         ac3_runner = AC3(csp, record_history=True)
         result = ac3_runner.run()
         self.assertDictEqual(solution_dict, result)
-        self.assertTrue(len(ac3_runner.history) > 0)
+        self.assertTrue(ac3_runner.get_history_length() > 0)
 
     def test_ac3_history_on_solvable_sudoku(self):
         sudoku_size = 9
@@ -361,7 +361,7 @@ class TestAlgorithms(unittest.TestCase):
         ac3_runner = AC3(csp, record_history=True)
         result = ac3_runner.run()
         self.assertDictEqual(solution_dict, result)
-        self.assertTrue(len(ac3_runner.history) > 0)
+        self.assertTrue(ac3_runner.get_history_length() > 0)
 
     def test_bts_history_on_solvable_sudoku(self):
         sudoku_size = 4
@@ -375,7 +375,7 @@ class TestAlgorithms(unittest.TestCase):
         backtracking_runner = BacktrackingSearch(csp, record_history=True)
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
-        self.assertTrue(len(backtracking_runner.history) > 0)
+        self.assertTrue(backtracking_runner.get_history_length() > 0)
 
     def test_bts_history_with_forward_checking(self):
         sudoku_size = 4
@@ -393,7 +393,7 @@ class TestAlgorithms(unittest.TestCase):
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
-        self.assertTrue(len(backtracking_runner.history) > 0)
+        self.assertTrue(backtracking_runner.get_history_length() > 0)
 
     def test_bts_history_with_LCV(self):
         sudoku_size = 4
@@ -411,7 +411,7 @@ class TestAlgorithms(unittest.TestCase):
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
-        self.assertTrue(len(backtracking_runner.history) > 0)
+        self.assertTrue(backtracking_runner.get_history_length() > 0)
 
     def test_bts_history_with_MRV(self):
         sudoku_size = 4
@@ -430,7 +430,7 @@ class TestAlgorithms(unittest.TestCase):
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
-        self.assertTrue(len(backtracking_runner.history) > 0)
+        self.assertTrue(backtracking_runner.get_history_length() > 0)
 
     def test_bts_history_with_MRV_full(self):
         sudoku_size = 9
@@ -449,7 +449,7 @@ class TestAlgorithms(unittest.TestCase):
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
-        self.assertTrue(len(backtracking_runner.history) > 0)
+        self.assertTrue(backtracking_runner.get_history_length() > 0)
 
     def test_bts_history_with_DegreeHeuristic(self):
         sudoku_size = 4
@@ -468,7 +468,7 @@ class TestAlgorithms(unittest.TestCase):
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
-        self.assertTrue(len(backtracking_runner.history) > 0)
+        self.assertTrue(backtracking_runner.get_history_length() > 0)
 
     def test_bts_history_with_DegreeHeuristic_full(self):
         sudoku_size = 9
@@ -487,7 +487,7 @@ class TestAlgorithms(unittest.TestCase):
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
-        self.assertTrue(len(backtracking_runner.history) > 0)
+        self.assertTrue(backtracking_runner.get_history_length() > 0)
 
     def test_bts_history_with_DegreeHeuristic_LCV(self):
         sudoku_size = 4
@@ -507,7 +507,7 @@ class TestAlgorithms(unittest.TestCase):
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
-        self.assertTrue(len(backtracking_runner.history) > 0)
+        self.assertTrue(backtracking_runner.get_history_length() > 0)
 
     def test_bts_history_with_DegreeHeuristic_LCV_full(self):
         sudoku_size = 9
@@ -527,7 +527,7 @@ class TestAlgorithms(unittest.TestCase):
         )
         result = backtracking_runner.run()
         self.assertDictEqual(solution_dict, result)
-        self.assertTrue(len(backtracking_runner.history) > 0)
+        self.assertTrue(backtracking_runner.get_history_length() > 0)
 
 
 if __name__ == '__main__':

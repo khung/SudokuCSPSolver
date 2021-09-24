@@ -4,6 +4,9 @@ from collections import deque
 from enum import Enum, IntEnum, auto
 import copy
 from typing import Optional, Any
+import sqlite3
+import pickle
+from abc import ABC, abstractmethod
 
 
 class AlgorithmTypes(IntEnum):
@@ -111,29 +114,24 @@ class ConstraintSatisfactionProblem:
         self._domains[variable].remove(value)
 
 
-class AC3HistoryItems(Enum):
-    """Possible items that can be stored in a step in the history of a run of the AC-3 algorithm."""
-    CURRENT_ARC = auto()
-    CURRENT_QUEUE = auto()
-    DOMAINS = auto()
-    MESSAGE = auto()
-
-
-class AC3:
+class CSPAlgorithm(ABC):
     """
-    Class for running the AC-3 algorithm.
+    Abstract base class for CSP algorithms.
 
     Public methods
     --------------
     * run
+    * get_history_step
+    * get_history_length
 
     Instance variables
     ------------------
     * csp
     * solution
-    * is_consistent
     * record_history
-    * history
+    * history_file
+    * history_counter
+    * db_connection
     """
 
     def __init__(self, csp: ConstraintSatisfactionProblem, record_history: bool = False) -> None:
@@ -143,9 +141,104 @@ class AC3:
         """
         self.csp = csp
         self.solution = None
-        self.is_consistent = False
         self.record_history = record_history
-        self.history = []
+        self.history_counter = 0
+        self.db_connection = None
+        if self.record_history:
+            self._setup_db()
+
+    @abstractmethod
+    def run(self):
+        """Main entry point for algorithm."""
+        pass
+
+    def _setup_db(self):
+        # Create new file. We can't use in-memory storage as the SQLite database may be accessed by
+        # different threads.
+        self.db_connection = sqlite3.connect(':memory:', check_same_thread=False)
+        with self.db_connection:
+            self.db_connection.execute('CREATE TABLE History (step INTEGER, item BLOB)')
+        # We don't close the connection as we want the database to stay resident.
+
+    def _update_history_item(self, step: int, item) -> None:
+        if not self.record_history:
+            raise LookupError("No history was recorded.")
+        pickled_item = pickle.dumps(item)
+        with self.db_connection:
+            self.db_connection.execute('UPDATE History SET item = ? WHERE step = ?', (pickled_item, step))
+
+    def _add_to_history(self, history_item: dict) -> None:
+        if not self.record_history:
+            raise LookupError("No history was recorded.")
+        pickled_item = pickle.dumps(history_item)
+        with self.db_connection:
+            self.db_connection.execute(
+                'INSERT INTO History (step, item) VALUES (?, ?)',
+                (self.history_counter, pickled_item)
+            )
+        self.history_counter += 1
+
+    def get_history_step(self, step: int) -> dict:
+        """
+        Get the specified of the run's history.
+
+        :param step: The step to get.
+        :return: A dictionary of the step's information.
+        """
+        if not self.record_history:
+            raise LookupError("No history was recorded.")
+        item = {}
+        for row in self.db_connection.execute('SELECT item FROM History WHERE step = ?', (step,)):
+            item = pickle.loads(row[0])
+        return item
+
+    def get_history_length(self) -> int:
+        """
+        Get the length of the run's history.
+
+        :return: Length of history.
+        """
+        length = 0
+        if self.record_history:
+            for row in self.db_connection.execute('SELECT COUNT(*) FROM History'):
+                length = row[0]
+        return length
+
+    def _open_history_db(self):
+        pass
+
+    def _close_history_db(self):
+        pass
+
+
+class AC3HistoryItems(Enum):
+    """Possible items that can be stored in a step in the history of a run of the AC-3 algorithm."""
+    CURRENT_ARC = auto()
+    CURRENT_QUEUE = auto()
+    DOMAINS = auto()
+    MESSAGE = auto()
+
+
+class AC3(CSPAlgorithm):
+    """
+    Class for running the AC-3 algorithm.
+
+    Public methods
+    --------------
+    * run
+
+    Instance variables
+    ------------------
+    * is_consistent
+    """
+
+    def __init__(self, csp: ConstraintSatisfactionProblem, record_history: bool = False) -> None:
+        """
+        :param csp: A CSP containing the problem to solve.
+        :param record_history: Whether to record the history of a run.
+        """
+        super().__init__(csp, record_history)
+        self.is_consistent = False
 
     def run(self) -> Optional[dict]:
         """
@@ -154,7 +247,11 @@ class AC3:
         :return: A dictionary of the remaining domains of each variable after the run. If no consistent assignment can
         be found (i.e. the domain of a variable became empty), None is returned.
         """
+        if self.record_history:
+            self._open_history_db()
         self.is_consistent = self._run_algorithm()
+        if self.record_history:
+            self._close_history_db()
         if self.is_consistent:
             self.solution = {}
             for variable in self.csp.variables:
@@ -175,10 +272,10 @@ class AC3:
                 AC3HistoryItems.CURRENT_ARC: (),
                 AC3HistoryItems.CURRENT_QUEUE: list(queue),
                 # Need to do a deep copy to preserve state of this variable
-                AC3HistoryItems.DOMAINS: copy.deepcopy(self.csp.get_all_domains()),
+                AC3HistoryItems.DOMAINS: self.csp.get_all_domains(),
                 AC3HistoryItems.MESSAGE: "Initialized queue and domains."
             }
-            self.history.append(history_item)
+            self._add_to_history(history_item)
         # Turn the list into a FIFO queue
         queue = deque(queue)
         while len(queue) > 0:
@@ -188,22 +285,22 @@ class AC3:
                 history_item = {
                     AC3HistoryItems.CURRENT_ARC: (first_var, second_var),
                     AC3HistoryItems.CURRENT_QUEUE: list(queue),
-                    AC3HistoryItems.DOMAINS: copy.deepcopy(self.csp.get_all_domains()),
+                    AC3HistoryItems.DOMAINS: self.csp.get_all_domains(),
                     AC3HistoryItems.MESSAGE: "Popped arc from queue."
                 }
-                self.history.append(history_item)
+                self._add_to_history(history_item)
             if self._revise(first_var, second_var):
                 if self.record_history:
                     history_item = {
                         AC3HistoryItems.CURRENT_ARC: (first_var, second_var),
-                        AC3HistoryItems.DOMAINS: copy.deepcopy(self.csp.get_all_domains())
+                        AC3HistoryItems.DOMAINS: self.csp.get_all_domains()
                     }
                 if len(self.csp.get_domain(first_var)) == 0:
                     if self.record_history:
                         history_item[AC3HistoryItems.CURRENT_QUEUE] = list(queue)
                         history_item[AC3HistoryItems.MESSAGE] = "Domain for variable '" + str(first_var) + \
                                                                 "' is empty. No consistent assignment found."
-                        self.history.append(history_item)
+                        self._add_to_history(history_item)
                     return False
                 for neighbor in self.csp.get_neighbors(first_var):
                     if neighbor != second_var:
@@ -211,10 +308,12 @@ class AC3:
                 if self.record_history:
                     history_item[AC3HistoryItems.CURRENT_QUEUE] = list(queue)
                     history_item[AC3HistoryItems.MESSAGE] = "Updated domains and queue."
-                    self.history.append(history_item)
+                    self._add_to_history(history_item)
         # Update the message of the last step to include the fact that the algorithm has stopped.
         if self.record_history:
-            self.history[-1][AC3HistoryItems.MESSAGE] += " Search has completed."
+            item = self.get_history_step(self.history_counter-1)
+            item[AC3HistoryItems.MESSAGE] += " Search has completed."
+            self._update_history_item(step=self.history_counter - 1, item=item)
         return True
 
     def _revise(self, first_var, second_var) -> bool:
@@ -262,7 +361,7 @@ class BacktrackingSearchHistoryItems(Enum):
     MESSAGE = auto()
 
 
-class BacktrackingSearch:
+class BacktrackingSearch(CSPAlgorithm):
     """
     Class for running the backtracking search algorithm.
 
@@ -296,7 +395,7 @@ class BacktrackingSearch:
         :param inference_function: The inference function to use.
         :param record_history: Whether to record the history of a run.
         """
-        self.csp = csp
+        super().__init__(csp, record_history)
         self.select_unassigned_variable_heuristic = None
         self.order_domain_values_heuristic = None
         self.inference_function = None
@@ -315,9 +414,6 @@ class BacktrackingSearch:
         if select_unassigned_variable_heuristic == SelectUnassignedVariableHeuristics.MRV and \
                 inference_function == InferenceFunctions.none:
             raise ValueError("Using the MRV heuristic requires an inference function")
-        self.solution = None
-        self.record_history = record_history
-        self.history = []
 
     def run(self) -> Optional[dict]:
         """
@@ -326,7 +422,11 @@ class BacktrackingSearch:
         :return: A dictionary of the complete assignment after the run. If no complete assignment can be found, None
         is returned.
         """
+        if self.record_history:
+            self._open_history_db()
         self.solution = self._run_algorithm()
+        if self.record_history:
+            self._close_history_db()
         return self.solution
 
     def _run_algorithm(self) -> Optional[dict]:
@@ -342,7 +442,7 @@ class BacktrackingSearch:
                     inferences=inferences,
                     message="Assignment is complete."
                 )
-                self.history.append(history_item)
+                self._add_to_history(history_item)
             return assignment
         variable = self._select_unassigned_variable(assignment, inferences)
         ordered_values = self._order_domain_values(variable, inferences)
@@ -356,7 +456,7 @@ class BacktrackingSearch:
                     ordered_values=ordered_values,
                     message="Selected variable and value."
                 )
-                self.history.append(history_item)
+                self._add_to_history(history_item)
             if self._is_consistent(variable, value, assignment):
                 assignment[variable] = value
                 new_inferences = self._inference(variable, value, self.inference_function, inferences)
@@ -369,7 +469,7 @@ class BacktrackingSearch:
                         ordered_values=ordered_values,
                         message="Updated assignment and inferences."
                     )
-                    self.history.append(history_item)
+                    self._add_to_history(history_item)
                 # Only continue if there are valid inferences. Otherwise, it means there will be a variable with no
                 # valid assignment.
                 new_inferences_valid = self._all_domains_have_values(new_inferences)
@@ -387,7 +487,7 @@ class BacktrackingSearch:
                         ordered_values=ordered_values,
                         message="Value is not consistent with assignment."
                     )
-                    self.history.append(history_item)
+                    self._add_to_history(history_item)
         # Need to remove variable assignment as the assignment variable is mutable, so it is passed by reference.
         if variable in assignment.keys():
             del assignment[variable]
@@ -405,7 +505,7 @@ class BacktrackingSearch:
                 ordered_values=ordered_values,
                 message=message
             )
-            self.history.append(history_item)
+            self._add_to_history(history_item)
         return None
 
     @staticmethod
@@ -419,11 +519,11 @@ class BacktrackingSearch:
     ) -> dict:
         history_item = {
             BacktrackingSearchHistoryItems.CURRENT_VARIABLE: current_variable,
-            BacktrackingSearchHistoryItems.ORDERED_VALUES: copy.copy(ordered_values),
+            BacktrackingSearchHistoryItems.ORDERED_VALUES: ordered_values,
             BacktrackingSearchHistoryItems.CURRENT_VALUE: current_value,
-            # Dictionaries need to be deep copies to store the current state
-            BacktrackingSearchHistoryItems.INFERENCES: copy.deepcopy(inferences),
-            BacktrackingSearchHistoryItems.CURRENT_ASSIGNMENT: copy.deepcopy(assignment),
+            # Dictionaries don't need to be deep copies since we're storing them in a database
+            BacktrackingSearchHistoryItems.INFERENCES: inferences,
+            BacktrackingSearchHistoryItems.CURRENT_ASSIGNMENT: assignment,
             BacktrackingSearchHistoryItems.MESSAGE: message
         }
         return history_item
