@@ -1041,6 +1041,8 @@ class SudokuCSPSolver:
     * selected_algorithm
     * csp
     * solving
+    * wait_time
+    * algorithm_result
     """
 
     def __init__(self) -> None:
@@ -1076,6 +1078,8 @@ class SudokuCSPSolver:
         self.csp = None
         # Track whether the algorithm is currently running
         self.solving = False
+        # Wait 250 ms between each UI update
+        self.wait_time = 250
         self.algorithm_result = None
 
     def run(self) -> None:
@@ -1197,7 +1201,7 @@ class SudokuCSPSolver:
         # Run the algorithm in another thread
         _thread.start_new_thread(self._run_algorithm, (algorithm_runner,))
         # Wait for the algorithm to finish
-        self._root.after(ms=250, func=self._wait_for_results)
+        self._root.after(ms=self.wait_time, func=self._wait_for_results)
 
     def _run_algorithm(self, algorithm_runner: Union[AC3, BacktrackingSearch]) -> None:
         self.algorithm_result = algorithm_runner.run()
@@ -1218,7 +1222,7 @@ class SudokuCSPSolver:
                 self.set_message(prefix + "...")
             else:
                 self.set_message(prefix + "   ")
-            self._root.after(ms=250, func=self._wait_for_results)
+            self._root.after(ms=self.wait_time, func=self._wait_for_results)
         else:
             self.set_controls(AppMode.SOLVE)
             # Change to solver view
