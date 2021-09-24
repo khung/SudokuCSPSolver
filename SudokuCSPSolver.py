@@ -1,3 +1,4 @@
+import _thread
 from tkinter import *
 from tkinter.scrolledtext import *
 from tkinter.ttk import *
@@ -220,6 +221,7 @@ class SolverCell(Frame):
 class AppMode(Enum):
     """The different modes that the application can be in."""
     INPUT = auto()
+    WAIT = auto()
     SOLVE = auto()
 
 
@@ -301,6 +303,7 @@ class SudokuBoardInputView(SudokuBoardBaseView):
     Public methods
     --------------
     * set_board
+    * set_board_state
     * reset_board
     * clear_board
     * get_board
@@ -336,6 +339,20 @@ class SudokuBoardInputView(SudokuBoardBaseView):
                 entry.insert(INSERT, value)
                 if entry_disabled:
                     entry.configure(state=DISABLED)
+
+    def set_board_state(self, enabled: bool) -> None:
+        """
+        Set whether input should be enabled for the board.
+
+        :param enabled: Enable input.
+        """
+        if enabled:
+            state = NORMAL
+        else:
+            state = DISABLED
+        for row in self._entries:
+            for entry in row:
+                entry.configure(state=state)
 
     def reset_board(self, puzzle: Union[str, list]) -> None:
         """
@@ -456,6 +473,7 @@ class OptionsPanelView(Frame):
     --------------
     * get_algorithm_value
     * is_algorithm_option_selected
+    * set_controls
     """
 
     def __init__(self, board_size: int, change_board_size_fn: Callable, master=None, **kw) -> None:
@@ -610,6 +628,28 @@ class OptionsPanelView(Frame):
         :return: Whether the option is selected.
         """
         return self._algorithm_options[option].get() == 1
+
+    def set_controls(self, enabled: bool) -> None:
+        """
+        Enable/disable the controls.
+
+        :param enabled: Whether the controls should be enabled.
+        """
+        if enabled:
+            state = ['!disabled']
+        else:
+            state = ['disabled']
+        for option in self.__options:
+            self.__options[option].state(state)
+        if enabled:
+            # If an algorithm is already selected, make sure to set the rest of the controls as expected.
+            button_selected = None
+            if self.get_algorithm_value() == AlgorithmTypes.AC3.value:
+                button_selected = 'AC3'
+            elif self.get_algorithm_value() == AlgorithmTypes.BACKTRACKING_SEARCH.value:
+                button_selected = 'BacktrackingSearch'
+            if button_selected:
+                self._update_algorithm_checkbuttons(button_selected)
 
 
 class StepControlButtons(Enum):
@@ -984,6 +1024,7 @@ class SudokuCSPSolver:
     * clear
     * reset_message
     * set_message
+    * get_message
     * change_board_size
     * set_controls
     * change_board_type
@@ -999,6 +1040,7 @@ class SudokuCSPSolver:
     * history
     * selected_algorithm
     * csp
+    * solving
     """
 
     def __init__(self) -> None:
@@ -1032,6 +1074,9 @@ class SudokuCSPSolver:
         self.selected_algorithm = None
         # Keep CSP after it's generated to be able to access its properties from methods other than solve()
         self.csp = None
+        # Track whether the algorithm is currently running
+        self.solving = False
+        self.algorithm_result = None
 
     def run(self) -> None:
         """Main loop of application."""
@@ -1102,8 +1147,7 @@ class SudokuCSPSolver:
         return root, board_views, main_panel, message, buttons
 
     def solve(self) -> None:
-        """Solve the Sudoku puzzle."""
-        # widget.after() to handle long-running process
+        """change to solve mode and run the algorithm in another thread."""
         # Remove any existing messages
         self.reset_message()
         # Make sure options are valid
@@ -1120,22 +1164,12 @@ class SudokuCSPSolver:
         except ValueError:
             self.set_message(text="There are duplicate values in a row, column, or region.", error=True)
             return
-        self.set_controls(AppMode.SOLVE)
-        # Change to solver view
-        self.change_board_type(AppMode.SOLVE)
-        # self.board_view.set_initial_board(puzzle_as_list)
-        # Change to information panel
-        self.change_panel(InfoPanelView)
+        self.solving = True
+        self.set_controls(AppMode.WAIT)
+        # Instead of changing the board type, disable input in the INPUT view.
+        self._board_view.set_board_state(enabled=False)
         # Solve using selected options
         self.selected_algorithm = AlgorithmTypes(self._main_panel['options_panel'].get_algorithm_value())
-        # Change information panel's section to match the algorithm
-        if self.selected_algorithm is AlgorithmTypes.AC3:
-            section_type = InfoPanelSectionTypes.AC3
-        elif self.selected_algorithm is AlgorithmTypes.BACKTRACKING_SEARCH:
-            section_type = InfoPanelSectionTypes.BACKTRACKING
-        else:
-            section_type = InfoPanelSectionTypes.none
-        self._main_panel['info_panel'].change_section(section_type)
         self.csp = board.generate_csp()
         if self.selected_algorithm == AlgorithmTypes.AC3:
             algorithm_runner = AC3(self.csp, record_history=True)
@@ -1160,28 +1194,63 @@ class SudokuCSPSolver:
             )
         else:
             raise ValueError("Invalid value for algorithm")
-        result = algorithm_runner.run()
-        # Both AC3 and backtracking search can return no consistent assignment
-        if result is None:
-            self.set_message(text="The search algorithm could not find a consistent assignment.", error=True)
-        elif self.selected_algorithm is AlgorithmTypes.AC3:
-            # AC3 can return a partial assignment
-            partial_assignment = False
-            for variable_name in result.keys():
-                if len(result[variable_name]) > 1:
-                    partial_assignment = True
-                    break
-            if partial_assignment:
-                self.set_message(text="AC3 algorithm returned a partial assignment.", error=True)
-        # Set values in GUI
-        # result_string = self.result_dict_to_string(result)
-        # self.board_view.set_board(values=result_string, entry_disabled=self.entry_disabled)
+        # Run the algorithm in another thread
+        _thread.start_new_thread(self._run_algorithm, (algorithm_runner,))
+        # Wait for the algorithm to finish
+        self._root.after(ms=250, func=self._wait_for_results)
+
+    def _run_algorithm(self, algorithm_runner: Union[AC3, BacktrackingSearch]) -> None:
+        self.algorithm_result = algorithm_runner.run()
         # Store history in instance so it will be accessible to other methods
         self.history = algorithm_runner.history
-        num_steps = len(self.history)
-        self._main_panel['info_panel'].set_total_steps(num_steps)
-        # Set first step in history
-        self._main_panel['info_panel'].go_to_first_step()
+        self.solving = False
+
+    def _wait_for_results(self):
+        if self.solving:
+            prefix = "Solving"
+            if not self.get_message().startswith(prefix):
+                self.set_message(prefix + "   ")
+            elif self.get_message() == prefix + "   ":
+                self.set_message(prefix + ".  ")
+            elif self.get_message() == prefix + ".  ":
+                self.set_message(prefix + ".. ")
+            elif self.get_message() == prefix + ".. ":
+                self.set_message(prefix + "...")
+            else:
+                self.set_message(prefix + "   ")
+            self._root.after(ms=250, func=self._wait_for_results)
+        else:
+            self.set_controls(AppMode.SOLVE)
+            # Change to solver view
+            self.change_board_type(AppMode.SOLVE)
+            # Make sure that the board is cleared of any previous solves
+            self._board_view.reset_board(self.puzzle)
+            # Change to information panel
+            self.change_panel(InfoPanelView)
+            # Change information panel's section to match the algorithm
+            if self.selected_algorithm is AlgorithmTypes.AC3:
+                section_type = InfoPanelSectionTypes.AC3
+            elif self.selected_algorithm is AlgorithmTypes.BACKTRACKING_SEARCH:
+                section_type = InfoPanelSectionTypes.BACKTRACKING
+            else:
+                section_type = InfoPanelSectionTypes.none
+            self._main_panel['info_panel'].change_section(section_type)
+            # Both AC3 and backtracking search can return no consistent assignment
+            if self.algorithm_result is None:
+                self.set_message(text="The search algorithm could not find a consistent assignment.", error=True)
+            elif self.selected_algorithm is AlgorithmTypes.AC3:
+                # AC3 can return a partial assignment
+                partial_assignment = False
+                for variable_name in self.algorithm_result.keys():
+                    if len(self.algorithm_result[variable_name]) > 1:
+                        partial_assignment = True
+                        break
+                if partial_assignment:
+                    self.set_message(text="AC3 algorithm returned a partial assignment.", error=True)
+            num_steps = len(self.history)
+            self._main_panel['info_panel'].set_total_steps(num_steps)
+            # Set first step in history
+            self._main_panel['info_panel'].go_to_first_step()
 
     @staticmethod
     def puzzle_list_to_string(puzzle: list) -> str:
@@ -1215,9 +1284,9 @@ class SudokuCSPSolver:
         """Reset the application from the solve mode to the input mode."""
         # Remove any existing messages
         self.reset_message()
-        self._board_view.reset_board(self.puzzle)
         self.set_controls(AppMode.INPUT)
         self.change_board_type(AppMode.INPUT)
+        self._board_view.reset_board(self.puzzle)
         self._main_panel['info_panel'].reset_panel()
         self.change_panel(OptionsPanelView)
 
@@ -1241,6 +1310,14 @@ class SudokuCSPSolver:
         color = 'red' if error else 'black'
         self._message.configure(foreground=color, text=text)
 
+    def get_message(self) -> str:
+        """
+        Get the current message being shown.
+
+        :return: The current message.
+        """
+        return self._message.cget('text')
+
     def change_board_size(self, size: int) -> None:
         """
         Change the size of the board.
@@ -1260,20 +1337,24 @@ class SudokuCSPSolver:
 
         :param mode: The current mode of the application.
         """
-        if mode == AppMode.SOLVE:
-            self.entry_disabled = True
-            # for row in self.board_view.entries:
-            #     for entry in row:
-            #         entry.configure(state=DISABLED)
+        if mode == AppMode.WAIT:
             # Need to remove keyboard focus when disabling button being pressed
+            self._buttons['solve_button'].state(['disabled', '!focus'])
+            self._buttons['reset_button'].state(['disabled'])
+            self._buttons['clear_button'].state(['disabled'])
+            self._main_panel['options_panel'].set_controls(enabled=False)
+        elif mode == AppMode.SOLVE:
+            self.entry_disabled = True
             self._buttons['solve_button'].state(['disabled', '!focus'])
             self._buttons['reset_button'].state(['!disabled'])
             self._buttons['clear_button'].state(['disabled'])
         else:
+            # Mode == AppMode.INPUT
             self.entry_disabled = False
             self._buttons['solve_button'].state(['!disabled'])
             self._buttons['reset_button'].state(['disabled', '!focus'])
             self._buttons['clear_button'].state(['!disabled'])
+            self._main_panel['options_panel'].set_controls(enabled=True)
 
     def change_board_type(self, mode: AppMode) -> None:
         """
