@@ -10,6 +10,13 @@ edition), referred to as AIMA.
 
 For descriptions of the algorithms and their options, see the AIMA textbook.
 
+## Requirements
+
+* Windows or Linux (macOS is not supported due to problems with Tcl/Tk on that
+platform)
+* Python 3 (official distributions only)
+* Python packages: tkinter, idlelib
+
 ## Usage
 
 ### Running the program

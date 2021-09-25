@@ -808,7 +808,7 @@ class InfoPanelView(Frame):
         queue_frame.pack(anchor=W)
         Label(queue_frame, text="Current queue:").pack(anchor=W)
         # TODO: Make the scrolled text box resize with window
-        queue_text = ScrolledText(queue_frame, width=text_box_width)
+        queue_text = ScrolledText(queue_frame, width=text_box_width, height=text_box_height)
         queue_text.pack()
         queue_text.configure(state=DISABLED)
         # Keep updatable sections
@@ -880,9 +880,13 @@ class InfoPanelView(Frame):
         """
         self._total_steps.configure(text=str(num_steps))
 
-    def go_to_first_step(self) -> None:
-        """Go to the first step."""
-        self.go_to_step_fn('1')
+    def go_to_first_step(self, reset_message: bool = False) -> None:
+        """
+        Go to the first step.
+
+        :param reset_message: Whether to reset the message text.
+        """
+        self.go_to_step_fn('1', reset_message)
 
     def go_to_previous_step(self) -> None:
         """Go to the previous step."""
@@ -1091,9 +1095,13 @@ class SudokuCSPSolver:
         # the size of the window.
         board_frame_height = 500
         board_frame_width = 500
-        panel_frame_width = 350
+        panel_frame_width = 375
 
         root = Tk()
+        # Set the background of all elements to the same color for a consistent look.
+        s = Style()
+        default_bg_color = s.lookup(style='TButton', option='background')
+        s.configure('Toolbar.TFrame', background=default_bg_color)
 
         upper_part = Frame(root)
         upper_part.pack()
@@ -1131,12 +1139,14 @@ class SudokuCSPSolver:
 
         # Message bar
         message_bar = Frame(root)
-        message_bar.pack()
-        message = Label(message_bar)
-        message.pack(side=LEFT, expand=YES, fill=BOTH)
+        message_bar.pack(fill=BOTH)
+        message = Label(message_bar, anchor='center')
+        message.pack(expand=YES, fill=BOTH)
         # Toolbar
-        toolbar = Frame(root)
-        toolbar.pack(pady=10)
+        toolbar_outer = Frame(root, style='Toolbar.TFrame')
+        toolbar_outer.pack(fill=BOTH)
+        toolbar = Frame(toolbar_outer, style='Toolbar.TFrame')
+        toolbar.pack()
         buttons = {
             'solve_button': Button(toolbar, text="Solve", command=self.solve),
             'reset_button': Button(toolbar, text="Reset solver", command=self.reset),
@@ -1144,9 +1154,9 @@ class SudokuCSPSolver:
         }
         # ttk buttons have more complex states than can be handled by the .configure command
         buttons['reset_button'].state(['disabled'])
-        buttons['solve_button'].pack(side=LEFT, padx=5)
-        buttons['reset_button'].pack(side=LEFT, padx=5)
-        buttons['clear_button'].pack(side=LEFT, padx=5)
+        buttons['solve_button'].pack(side=LEFT, padx=5, pady=10)
+        buttons['reset_button'].pack(side=LEFT, padx=5, pady=10)
+        buttons['clear_button'].pack(side=LEFT, padx=5, pady=10)
         root.title("Sudoku CSP Solver")
         return root, board_views, main_panel, message, buttons
 
@@ -1254,7 +1264,7 @@ class SudokuCSPSolver:
             num_steps = len(self.history)
             self._main_panel['info_panel'].set_total_steps(num_steps)
             # Set first step in history
-            self._main_panel['info_panel'].go_to_first_step()
+            self._main_panel['info_panel'].go_to_first_step(reset_message=False)
 
     @staticmethod
     def puzzle_list_to_string(puzzle: list) -> str:
@@ -1384,14 +1394,16 @@ class SudokuCSPSolver:
             else:
                 self._main_panel[panel].grid()
 
-    def go_to_step(self, step_string: str) -> None:
+    def go_to_step(self, step_string: str, reset_message: bool = True) -> None:
         """
         Go to the specified step in the algorithm run's history.
 
         :param step_string: A string representation of the step to go to.
+        :param reset_message: Whether to reset the message text.
         """
         # Clear message first
-        self.reset_message()
+        if reset_message:
+            self.reset_message()
         # Validate input
         try:
             step = int(step_string)
