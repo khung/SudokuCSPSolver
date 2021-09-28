@@ -742,7 +742,8 @@ class InfoPanelView(Frame):
         step_info_frame = Frame(self)
         step_info_frame.pack(anchor=W)
         Label(step_info_frame, text="Step: ").pack(side=LEFT)
-        current_step_entry = Entry(step_info_frame, width=4, justify=RIGHT)
+        # Width will be set programmatically based on the total number of steps
+        current_step_entry = Entry(step_info_frame, justify=RIGHT)
         current_step_entry.pack(side=LEFT)
         Hovertip(current_step_entry, "Current step")
 
@@ -874,11 +875,14 @@ class InfoPanelView(Frame):
 
     def set_total_steps(self, num_steps: int) -> None:
         """
-        Set the total number of steps.
+        Set the total number of steps and the size of the current step entry.
 
         :param num_steps: Total number of steps.
         """
-        self._total_steps.configure(text=str(num_steps))
+        total_steps_string = str(num_steps)
+        # Give a little more room for better aesthetics
+        self._current_step_entry.configure(width=len(total_steps_string)+1)
+        self._total_steps.configure(text=total_steps_string)
 
     def go_to_first_step(self, reset_message: bool = False) -> None:
         """
