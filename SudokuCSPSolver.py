@@ -808,7 +808,6 @@ class InfoPanelView(Frame):
         queue_frame = Frame(ac3_section_frame)
         queue_frame.pack(anchor=W)
         Label(queue_frame, text="Current queue:").pack(anchor=W)
-        # TODO: Make the scrolled text box resize with window
         queue_text = ScrolledText(queue_frame, width=text_box_width, height=text_box_height)
         queue_text.pack()
         queue_text.configure(state=DISABLED)
@@ -831,7 +830,6 @@ class InfoPanelView(Frame):
         assignment_frame = Frame(backtracking_section_frame)
         assignment_frame.pack(anchor=W)
         Label(assignment_frame, text="Current assignment:").pack(anchor=W)
-        # TODO: Make the scrolled text box resize with window
         assignment_text = ScrolledText(assignment_frame, width=text_box_width, height=text_box_height)
         assignment_text.pack()
         assignment_text.configure(state=DISABLED)
@@ -1212,9 +1210,9 @@ class SudokuCSPSolver:
             )
         else:
             raise ValueError("Invalid value for algorithm")
-        # Run the algorithm in another thread
+        # Run the algorithm in another thread to prevent blocking of UI
         _thread.start_new_thread(self._run_algorithm, (algorithm_runner,))
-        # Wait for the algorithm to finish
+        # Wait for the algorithm to finish then display the results
         self._root.after(ms=self.wait_time, func=self._wait_for_results)
 
     def _run_algorithm(self, algorithm_runner: Union[AC3, BacktrackingSearch]) -> None:
